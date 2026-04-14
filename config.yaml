@@ -1,0 +1,25 @@
+jarvis:
+  name: "JARVIS"
+  version: "0.1.0"
+  data_dir: "./data"
+  database: "jarvis.db"
+
+user:
+  name: null
+  preferences: {}
+
+university:
+  enabled: false
+  auto_sync: false
+  sync_time: "06:00"
+
+voice:
+  enabled: true
+  wake_word: "hey jarvis"
+  stt_model: "base"
+  tts_voice: "en_US-lessac-medium"
+
+privacy:
+  encrypted: true
+  telemetry: false
+  log_level: "info"

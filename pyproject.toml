@@ -1,0 +1,67 @@
+[tool.poetry]
+name = "jarvis"
+version = "0.1.0"
+description = "Privacy-first local AI assistant - JARVIS"
+authors = ["You"]
+readme = "README.md"
+packages = [{include = "jarvis"}]
+
+[tool.poetry.scripts]
+jarvis = "jarvis.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+pydantic = "^2.0"
+pydantic-settings = "^2.0"
+
+sqlalchemy = "^2.0"
+cryptography = "^41.0"
+
+pyyaml = "^6.0"
+
+rich = "^13.0"
+click = "^8.1"
+
+httpx = "^0.25"
+beautifulsoup4 = "^4.12"
+
+# Voice extras
+pyaudio = { version = "^0.2", optional = true }
+sounddevice = { version = "^0.4", optional = true }
+openai-whisper = { version = "^20231117", optional = true }
+
+# API extras
+fastapi = { version = "^0.109", optional = true }
+uvicorn = { version = "^0.27", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4"
+pytest-asyncio = "^0.21"
+black = "^23.0"
+ruff = "^0.1"
+mypy = "^1.7"
+
+[tool.poetry.extras]
+voice = ["pyaudio", "sounddevice", "openai-whisper"]
+api = ["fastapi", "uvicorn"]
+all = ["pyaudio", "sounddevice", "openai-whisper", "fastapi", "uvicorn"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

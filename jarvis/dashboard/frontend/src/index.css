@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background-color: #0a0a0f;
+  color: #ffffff;
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@layer components {
+  .card {
+    @apply bg-background-card backdrop-blur-sm border border-cyan/30 rounded-lg p-4;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+  }
+  
+  .card-glow {
+    @apply card;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  }
+  
+  .btn {
+    @apply px-4 py-2 border border-cyan text-cyan font-heading text-sm uppercase tracking-wider;
+    @apply transition-all duration-200 cursor-pointer;
+    @apply hover:bg-cyan hover:text-background hover:shadow-glow-cyan;
+    @apply active:scale-95;
+  }
+  
+  .btn-icon {
+    @apply p-2 border border-cyan/50 text-cyan/70 rounded;
+    @apply transition-all duration-200;
+    @apply hover:bg-cyan hover:text-background hover:border-cyan;
+    @apply active:scale-95;
+  }
+  
+  .progress-bar {
+    @apply h-3 bg-background-dark rounded-full overflow-hidden;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  }
+  
+  .progress-fill {
+    @apply h-full rounded-full;
+    background: linear-gradient(90deg, #00d4ff, #0088ff);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    animation: progress-glow 2s ease-in-out infinite;
+  }
+  
+  .fire-icon {
+    @apply inline-block;
+    animation: fire 1s ease-in-out infinite;
+  }
+  
+  .neon-text {
+    @apply text-transparent bg-clip-text;
+    background: linear-gradient(90deg, #00d4ff, #00ffff, #7b2cbf);
+    filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+  }
+  
+  .habit-item {
+    @apply flex items-center justify-between p-3 rounded-lg bg-background-dark/50;
+    @apply border border-transparent;
+    @apply transition-all duration-200;
+  }
+  
+  .habit-item:hover {
+    @apply border-cyan/30 bg-background-dark/80;
+  }
+  
+  .habit-item.completed {
+    @apply bg-success/10 border-success/30;
+  }
+  
+  .checkbox {
+    @apply w-6 h-6 border-2 border-cyan rounded cursor-pointer;
+    @apply flex items-center justify-center;
+    @apply transition-all duration-200;
+  }
+  
+  .checkbox.checked {
+    @apply bg-cyan text-background border-cyan;
+  }
+  
+  .checkbox:hover {
+    @apply shadow-glow-cyan;
+  }
+}
+
+@keyframes progress-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00d4ff;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ffff;
+}

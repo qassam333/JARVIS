@@ -1,0 +1,16 @@
+[Unit]
+Description=JARVIS - Your Local AI Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=%USER%
+WorkingDirectory=%DIR%
+ExecStart="%DIR%/.venv/bin/jarvis" voice
+Restart=always
+RestartSec=10
+StandardOutput=append:%DIR%/data/jarvis.log
+StandardError=append:%DIR%/data/jarvis-error.log
+
+[Install]
+WantedBy=default.target

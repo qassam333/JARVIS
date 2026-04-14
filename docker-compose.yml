@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  jarvis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jarvis
+    image: jarvis:latest
+    environment:
+      - JARVIS_DATA_DIR=/app/data
+      - JARVIS_DB_PATH=/app/data/jarvis.db
+      - JARVIS_LOG_LEVEL=info
+      - JARVIS_DEBUG=false
+    volumes:
+      - ./data:/app/data
+      - ./voices:/app/voices
+      - ./whisper.cpp/models:/app/whisper.cpp/models
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    networks:
+      - jarvis-network
+
+  jarvis-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jarvis-api
+    image: jarvis:latest
+    command: ["python", "-m", "uvicorn", "jarvis.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      - JARVIS_DATA_DIR=/app/data
+      - JARVIS_DB_PATH=/app/data/jarvis.db
+      - JARVIS_API_ENABLED=true
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - jarvis-network
+    profiles:
+      - api
+
+networks:
+  jarvis-network:
+    driver: bridge

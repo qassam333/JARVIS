@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=JARVIS
+Comment=Your Local AI Assistant
+Exec=/bin/bash -c 'cd /home/deep/BACKUP/GG POJECT/GGjarvis/JARVIS && source .venv/bin/activate && jarvis accountability today'
+Icon=utilities-system-monitor
+Terminal=true
+Categories=Utility;

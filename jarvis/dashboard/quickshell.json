@@ -1,0 +1,13 @@
+{
+  "name": "JARVIS Dashboard",
+  "description": "O4 Studio - Life Management Dashboard",
+  "type": "iframe",
+  "url": "http://localhost:8080",
+  "geometry": {
+    "fullscreen": true
+  },
+  "styles": {
+    "background": "transparent",
+    "border": "none"
+  }
+}
