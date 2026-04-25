@@ -64,6 +64,7 @@ class BriefingService:
     def _get_task_summary(self) -> str:
         """Get task summary for the day."""
         from jarvis.skills.tasks import TaskService
+        from jarvis.skills.daily_tasks import DailyTaskService
         from jarvis.db.models import TaskStatus
 
         task_service = TaskService(self.db)
@@ -76,7 +77,23 @@ class BriefingService:
             if t.completed_at and t.completed_at.date() == date.today()
         ]
 
-        lines = ["Task Summary:"]
+        lines = ["=== TODAY'S TASKS ==="]
+
+        daily_service = DailyTaskService(self.db)
+        today_daily = daily_service.get_today_tasks()
+
+        if today_daily:
+            for dt in today_daily:
+                task = task_service.db.query_one(
+                    "SELECT title FROM tasks WHERE id = ?", (dt.task_id,)
+                )
+                status_icon = "✓" if dt.status == "done" else "○"
+                title = task["title"][:40] if task else "Unknown"
+                lines.append(f"  {status_icon} {title}")
+        else:
+            lines.append("  No daily tasks set. Run 'jarvis daily generate'")
+
+        lines.append("")
 
         if due_today:
             lines.append(f"  Due today: {len(due_today)}")
@@ -85,6 +102,7 @@ class BriefingService:
                 lines.append(
                     f"      • {task.title} {f'({deadline_str})' if deadline_str else ''}"
                 )
+            lines.append("")
 
         pending = len(pending_tasks)
         lines.append(f"  Pending: {pending} task{'s' if pending != 1 else ''}")

@@ -8,18 +8,18 @@ export default {
     extend: {
       colors: {
         background: {
-          DEFAULT: '#0a0a0f',
-          dark: '#0f0f1a',
-          card: 'rgba(26, 26, 46, 0.8)',
+          DEFAULT: '#04001a',
+          dark: '#02000d',
+          card: 'rgba(7, 0, 184, 0.1)',
         },
-        cyan: {
-          DEFAULT: '#00d4ff',
-          glow: '#00ffff',
-          dim: '#0088ff',
+        primary: {
+          DEFAULT: '#0700b8',
+          glow: '#4d4dff',
+          dim: '#050080',
         },
-        purple: {
-          DEFAULT: '#7b2cbf',
-          bright: '#9d4edd',
+        accent: {
+          DEFAULT: '#00ff88',
+          bright: '#5cffb1',
         },
         success: '#00ff88',
         warning: '#ff6b35',
@@ -32,13 +32,13 @@ export default {
       },
       fontFamily: {
         heading: ['Orbitron', 'sans-serif'],
-        body: ['Rajdhani', 'sans-serif'],
+        body: ['Manrope', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       boxShadow: {
-        'glow-cyan': '0 0 20px rgba(0, 212, 255, 0.3)',
-        'glow-cyan-lg': '0 0 40px rgba(0, 212, 255, 0.5)',
-        'glow-purple': '0 0 20px rgba(123, 44, 191, 0.3)',
+        'glow-primary': '0 0 20px rgba(7, 0, 184, 0.5)',
+        'glow-primary-lg': '0 0 40px rgba(7, 0, 184, 0.7)',
+        'glow-accent': '0 0 20px rgba(0, 255, 136, 0.3)',
         'glow-fire': '0 0 15px rgba(255, 107, 53, 0.5)',
       },
       animation: {
@@ -48,8 +48,8 @@ export default {
       },
       keyframes: {
         'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(0, 212, 255, 0.3)' },
-          '50%': { boxShadow: '0 0 40px rgba(0, 212, 255, 0.6)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(7, 0, 184, 0.4)' },
+          '50%': { boxShadow: '0 0 40px rgba(7, 0, 184, 0.8)' },
         },
         'slide-up': {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
@@ -61,7 +61,7 @@ export default {
         },
       },
       backgroundImage: {
-        'grid': 'linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px)',
+        'grid': 'linear-gradient(rgba(7, 0, 184, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(7, 0, 184, 0.05) 1px, transparent 1px)',
       },
     },
   },

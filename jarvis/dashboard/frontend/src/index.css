@@ -15,13 +15,10 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Rajdhani', sans-serif;
-  background-color: #0a0a0f;
+  font-family: 'Manrope', sans-serif;
+  background: linear-gradient(90deg, #0700b8, #00ff88);
+  background-attachment: fixed;
   color: #ffffff;
-  background-image: 
-    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -34,26 +31,26 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer components {
   .card {
-    @apply bg-background-card backdrop-blur-sm border border-cyan/30 rounded-lg p-4;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+    @apply bg-background-card backdrop-blur-sm border border-primary/40 rounded-lg p-4;
+    box-shadow: 0 0 20px rgba(7, 0, 184, 0.15);
   }
   
   .card-glow {
     @apply card;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+    box-shadow: 0 0 20px rgba(7, 0, 184, 0.4);
   }
   
   .btn {
-    @apply px-4 py-2 border border-cyan text-cyan font-heading text-sm uppercase tracking-wider;
+    @apply px-4 py-2 border border-primary text-primary font-heading text-sm uppercase tracking-wider;
     @apply transition-all duration-200 cursor-pointer;
-    @apply hover:bg-cyan hover:text-background hover:shadow-glow-cyan;
+    @apply hover:bg-primary hover:text-white hover:shadow-glow-primary;
     @apply active:scale-95;
   }
   
   .btn-icon {
-    @apply p-2 border border-cyan/50 text-cyan/70 rounded;
+    @apply p-2 border border-primary/50 text-primary/70 rounded;
     @apply transition-all duration-200;
-    @apply hover:bg-cyan hover:text-background hover:border-cyan;
+    @apply hover:bg-primary hover:text-white hover:border-primary;
     @apply active:scale-95;
   }
   
@@ -64,8 +61,8 @@ h1, h2, h3, h4, h5, h6 {
   
   .progress-fill {
     @apply h-full rounded-full;
-    background: linear-gradient(90deg, #00d4ff, #0088ff);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    background: linear-gradient(90deg, #0700b8, #00ff88);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
     animation: progress-glow 2s ease-in-out infinite;
   }
   
@@ -75,9 +72,8 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .neon-text {
-    @apply text-transparent bg-clip-text;
-    background: linear-gradient(90deg, #00d4ff, #00ffff, #7b2cbf);
-    filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.8), 0 0 20px rgba(0, 255, 136, 0.4);
   }
   
   .habit-item {
@@ -87,34 +83,34 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .habit-item:hover {
-    @apply border-cyan/30 bg-background-dark/80;
+    @apply border-primary/30 bg-background-dark/80;
   }
   
   .habit-item.completed {
-    @apply bg-success/10 border-success/30;
+    @apply bg-accent/10 border-accent/30;
   }
   
   .checkbox {
-    @apply w-6 h-6 border-2 border-cyan rounded cursor-pointer;
+    @apply w-6 h-6 border-2 border-primary rounded cursor-pointer;
     @apply flex items-center justify-center;
     @apply transition-all duration-200;
   }
   
   .checkbox.checked {
-    @apply bg-cyan text-background border-cyan;
+    @apply bg-primary text-white border-primary;
   }
   
   .checkbox:hover {
-    @apply shadow-glow-cyan;
+    @apply shadow-glow-primary;
   }
 }
 
 @keyframes progress-glow {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
   }
 }
 
@@ -124,14 +120,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0f;
+  background: #04001a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #00d4ff;
+  background: #0700b8;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #00ffff;
+  background: #4d4dff;
 }

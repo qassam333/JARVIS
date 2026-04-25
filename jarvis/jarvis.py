@@ -6,6 +6,7 @@ from jarvis.core.intent_parser import IntentParser, Intent
 from jarvis.core.brain import DecisionEngine, Context
 from jarvis.core.memory import MemoryEngine
 from jarvis.core import handlers
+from jarvis.core import habit_handlers
 from jarvis.db.database import Database
 from jarvis.utils.logger import setup_logger, get_logger
 
@@ -59,6 +60,13 @@ class Jarvis:
         self.brain.register(IntentType.HELP, handlers.handle_help, "help")
         self.brain.register(IntentType.UNKNOWN, handlers.handle_unknown, "unknown")
 
+        # Habit, goal, and energy handlers
+        self.brain.register(IntentType.LOG_HABIT, habit_handlers.handle_log_habit, "habits")
+        self.brain.register(IntentType.LIST_HABITS, habit_handlers.handle_list_habits, "habits")
+        self.brain.register(IntentType.GOAL_STATUS, habit_handlers.handle_goal_status, "goals")
+        self.brain.register(IntentType.SET_ENERGY, habit_handlers.handle_set_energy, "energy")
+        self.brain.register(IntentType.DELETE_TASK, habit_handlers.handle_delete_task, "tasks")
+
     def _setup_context(self):
         """Setup execution context."""
         context = Context(
@@ -82,11 +90,28 @@ class Jarvis:
         """
         self.logger.info(f"Processing: {text}")
 
-        intent = self.parser.parse(text, source)
+        # Resolve follow-up references from conversation context
+        resolved_text = self.memory.resolve_reference(text)
+        if resolved_text != text:
+            self.logger.info(f"Resolved reference: '{text}' -> '{resolved_text}'")
+
+        # Store user turn
+        self.memory.session.add_turn("user", text)
+
+        intent = self.parser.parse(resolved_text, source)
 
         self.memory.session.add_command(text, intent.intent.value, True)
 
         response = self.brain.process(intent)
+
+        # Store assistant turn with response data for future reference resolution
+        self.memory.session.add_turn(
+            "assistant",
+            response.message,
+            intent=intent.intent.value,
+            entities=intent.entities,
+            response_data=response.data,
+        )
 
         self.memory.session.last_result = response
 

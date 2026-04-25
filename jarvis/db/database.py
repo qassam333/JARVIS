@@ -1,6 +1,7 @@
 """SQLite database connection and operations."""
 
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Optional
 from contextlib import contextmanager
@@ -14,8 +15,11 @@ class Database:
     """SQLite database wrapper."""
 
     def __init__(self, path: Optional[Path] = None):
+        if isinstance(path, str):
+            path = Path(path)
         self.path = path or Path("./data/jarvis.db")
         self._connection: Optional[sqlite3.Connection] = None
+        self._lock = threading.Lock()
         self._ensure_directory()
 
     def _ensure_directory(self) -> None:
@@ -25,7 +29,9 @@ class Database:
     def _get_connection(self) -> sqlite3.Connection:
         """Get or create database connection."""
         if self._connection is None:
-            self._connection = sqlite3.connect(str(self.path))
+            self._connection = sqlite3.connect(
+                str(self.path), check_same_thread=False
+            )
             self._connection.row_factory = self._dict_factory
             self._connection.execute("PRAGMA foreign_keys = ON")
         return self._connection
@@ -38,13 +44,14 @@ class Database:
     @contextmanager
     def get_session(self):
         """Context manager for database sessions."""
-        conn = self._get_connection()
-        try:
-            yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
+        with self._lock:
+            conn = self._get_connection()
+            try:
+                yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
         """Execute a SQL statement."""

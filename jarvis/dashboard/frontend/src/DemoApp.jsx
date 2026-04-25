@@ -1,65 +1,79 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import api from './api';
+import React, { useState } from 'react';
 import Countdown from './components/Countdown';
 import HabitList from './components/HabitList';
 import GoalProgress from './components/GoalProgress';
 import WeeklyStats from './components/WeeklyStats';
 import Quote from './components/Quote';
 
-function App() {
-  const [profile, setProfile] = useState(null);
-  const [habits, setHabits] = useState([]);
-  const [goals, setGoals] = useState([]);
-  const [weeklyStats, setWeeklyStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
+function DemoApp() {
+  const [loading, setLoading] = useState(false);
 
-  const loadData = useCallback(async () => {
-    try {
-      const [profileData, habitsData, goalsData, statsData] = await Promise.all([
-        api.getProfile(),
-        api.getHabits(),
-        api.getGoals(),
-        api.getWeeklyStats(),
-      ]);
-      
-      setProfile(profileData);
-      setHabits(habitsData);
-      setGoals(goalsData);
-      setWeeklyStats(statsData);
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Failed to load data:', error);
-    } finally {
-      setLoading(false);
+  // Fake Data for LinkedIn Showcase
+  const profile = {
+    days_until_grad: 30,
+    day_name: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+    today: new Date().toISOString(),
+    is_grad_day: false,
+  };
+
+  const habits = [
+    { id: '1', name: 'Core Engine Development', current_streak: 45, best_streak: 50, completed_today: true, duration: 240, frequency: 'daily' },
+    { id: '2', name: 'Read Tech Papers', current_streak: 12, best_streak: 15, completed_today: true, pages: 25, frequency: 'daily' },
+    { id: '3', name: 'Daily Standup & Planning', current_streak: 108, best_streak: 120, completed_today: true, frequency: 'daily' },
+    { id: '4', name: 'Morning Workout', current_streak: 5, best_streak: 30, completed_today: false, frequency: 'daily' }
+  ];
+
+  const goals = [
+    {
+      id: '1',
+      title: 'Ship O4 Studio Alpha',
+      description: 'First playable release of the game engine',
+      progress: 85,
+      status: 'active',
+      priority: 'critical',
+      area_color: '#0700b8',
+      target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      milestones: [
+        { id: '1', title: 'Physics Engine V2', progress: 100, completed: true },
+        { id: '2', title: 'Multiplayer Netcode', progress: 100, completed: true },
+        { id: '3', title: 'Final Polish & QA', progress: 20, completed: false }
+      ]
+    },
+    {
+      id: '2',
+      title: 'Launch Marketing Campaign',
+      description: 'Build hype for the alpha release',
+      progress: 60,
+      status: 'active',
+      priority: 'high',
+      area_color: '#00ff88',
+      target_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+      milestones: [
+        { id: '4', title: 'Trailer Rendering', progress: 100, completed: true },
+        { id: '5', title: 'Press Release Distribution', progress: 0, completed: false }
+      ]
     }
-  }, []);
+  ];
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+  const weeklyStats = {
+    completion_rate: 92,
+    total_completed: 26,
+    total_expected: 28,
+    chart_data: [
+      { day: "Mon", completed: 4, total: 4, percentage: 100 },
+      { day: "Tue", completed: 4, total: 4, percentage: 100 },
+      { day: "Wed", completed: 3, total: 4, percentage: 75 },
+      { day: "Thu", completed: 4, total: 4, percentage: 100 },
+      { day: "Fri", completed: 4, total: 4, percentage: 100 },
+      { day: "Sat", completed: 3, total: 4, percentage: 75 },
+      { day: "Sun", completed: 4, total: 4, percentage: 100 }
+    ]
+  };
 
   const handleRefresh = () => {
     setLoading(true);
-    loadData();
+    setTimeout(() => setLoading(false), 500); // Fake loading delay
   };
-
-  if (loading && !profile) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="text-primary font-heading text-2xl tracking-[0.3em] mb-4 animate-pulse">
-            LOADING JARVIS
-          </div>
-          <div className="w-48 h-1 bg-background-dark rounded overflow-hidden">
-            <div className="h-full bg-primary animate-pulse" style={{ width: '60%' }} />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background">
@@ -73,13 +87,13 @@ function App() {
               </h1>
               <span className="text-text-dim text-sm">|</span>
               <span className="font-heading text-sm tracking-wider text-accent-bright">
-                O4 STUDIO
+                O4 STUDIO DEMO
               </span>
             </div>
             
             <div className="flex items-center gap-4">
               <div className="text-xs text-text-dim">
-                Updated: {lastUpdate.toLocaleTimeString()}
+                Updated: {new Date().toLocaleTimeString()}
               </div>
               <button
                 onClick={handleRefresh}
@@ -100,8 +114,8 @@ function App() {
             {/* Top Row */}
             <div className="col-span-3">
               <Countdown 
-                daysLeft={profile?.days_until_grad} 
-                isGradDay={profile?.is_grad_day}
+                daysLeft={profile.days_until_grad} 
+                isGradDay={profile.is_grad_day}
               />
             </div>
             <div className="col-span-3">
@@ -110,19 +124,14 @@ function App() {
                   TODAY
                 </h3>
                 <div className="font-heading text-4xl text-primary">
-                  {profile?.day_name}
+                  {profile.day_name}
                 </div>
                 <div className="text-sm text-text-dim mt-2">
-                  {new Date(profile?.today).toLocaleDateString('en-US', { 
+                  {new Date(profile.today).toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric' 
                   })}
                 </div>
-                {profile?.is_grad_day && (
-                  <div className="mt-3 px-3 py-1 bg-warning/20 border border-warning rounded text-warning text-xs font-heading">
-                    GRAD DAY
-                  </div>
-                )}
               </div>
             </div>
             <div className="col-span-6">
@@ -131,7 +140,7 @@ function App() {
 
             {/* Middle Row - Habits */}
             <div className="col-span-12">
-              <HabitList habits={habits} onUpdate={loadData} />
+              <HabitList habits={habits} onUpdate={() => {}} />
             </div>
 
             {/* Bottom Row */}
@@ -147,7 +156,7 @@ function App() {
         {/* Footer */}
         <footer className="flex-shrink-0 px-6 py-2 border-t border-primary/10 text-center">
           <span className="text-xs text-text-dim font-heading tracking-wider">
-            JARVIS DASHBOARD v1.0 | POWERED BY O4 STUDIO | AUTO-REFRESH: 60s
+            JARVIS DASHBOARD v1.0 | POWERED BY O4 STUDIO | DEMO MODE
           </span>
         </footer>
       </div>
@@ -155,4 +164,4 @@ function App() {
   );
 }
 
-export default App;
+export default DemoApp;

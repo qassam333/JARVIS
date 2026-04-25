@@ -27,7 +27,7 @@ export default function GoalProgress({ goals }) {
     const colors = {
       critical: 'bg-danger/20 text-danger border-danger',
       high: 'bg-warning/20 text-warning border-warning',
-      medium: 'bg-cyan/20 text-cyan border-cyan',
+      medium: 'bg-primary/20 text-primary border-primary',
       low: 'bg-text-dim/20 text-text-dim border-text-dim',
     };
     
@@ -45,7 +45,7 @@ export default function GoalProgress({ goals }) {
 
   return (
     <div className="card h-full">
-      <h2 className="font-heading text-lg text-cyan tracking-wider mb-4">
+      <h2 className="font-heading text-lg text-primary tracking-wider mb-4">
         GOAL PROGRESS
       </h2>
 
@@ -74,7 +74,7 @@ export default function GoalProgress({ goals }) {
                     max="100"
                     value={newProgress}
                     onChange={(e) => setNewProgress(parseInt(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 bg-background-dark border border-cyan rounded text-center font-mono text-sm"
+                    className="w-16 px-2 py-1 bg-background-dark border border-primary rounded text-center font-mono text-sm"
                   />
                   <button
                     onClick={() => handleUpdate(goal.id)}
@@ -95,7 +95,7 @@ export default function GoalProgress({ goals }) {
                     setEditing(goal.id);
                     setNewProgress(goal.progress);
                   }}
-                  className="font-mono text-cyan text-sm hover:text-cyan-glow"
+                  className="font-mono text-primary text-sm hover:text-primary-glow"
                 >
                   {goal.progress}%
                 </button>

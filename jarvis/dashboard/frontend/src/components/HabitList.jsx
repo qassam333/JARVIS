@@ -35,10 +35,10 @@ export default function HabitList({ habits, onUpdate }) {
 
   const ExtraInfo = ({ habit }) => {
     if (habit.pages) {
-      return <span className="text-xs text-cyan">{habit.pages} pg</span>;
+      return <span className="text-xs text-primary">{habit.pages} pg</span>;
     }
     if (habit.duration) {
-      return <span className="text-xs text-cyan">{habit.duration}m</span>;
+      return <span className="text-xs text-primary">{habit.duration}m</span>;
     }
     return null;
   };
@@ -53,7 +53,7 @@ export default function HabitList({ habits, onUpdate }) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-heading text-lg text-cyan tracking-wider">
+        <h2 className="font-heading text-lg text-primary tracking-wider">
           TODAY'S HABITS
         </h2>
         <div className="text-sm text-text-muted">

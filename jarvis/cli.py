@@ -1,7 +1,7 @@
 """CLI interface for JARVIS."""
 
 import click
-from datetime import datetime
+from datetime import datetime, date, timezone
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -12,53 +12,29 @@ from jarvis.db.models import (
     TaskCreate,
     TaskUpdate,
     TaskStatus,
+    TaskSource,
     NoteCreate,
     NoteUpdate,
     KnowledgeCreate,
 )
-from jarvis.skills.tasks import TaskService
-from jarvis.skills.notes import NoteService
-from jarvis.skills.knowledge import KnowledgeService
+from jarvis.core.services import get_services
 from jarvis.utils.logger import setup_logger, get_logger
 from jarvis.utils.config import config
 
 console = Console()
 logger = get_logger("cli")
-
-
 def get_db() -> Database:
-    """Get database instance."""
-    return Database(config.db_path)
-
-
-def get_task_service() -> TaskService:
-    """Get task service."""
-    return TaskService(get_db())
-
-
-def get_note_service() -> NoteService:
-    """Get note service."""
-    return NoteService(get_db())
-
-
-def get_knowledge_service() -> KnowledgeService:
-    """Get knowledge service."""
-    return KnowledgeService(get_db())
-
-
+    """Get database instance (legacy helper — prefer get_services().db)."""
+    return get_services().db
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="0.2.0")
 def cli():
     """JARVIS - Your Local AI Assistant"""
     pass
-
-
 @cli.group()
 def task():
     """Task management commands"""
     pass
-
-
 @task.command("add")
 @click.argument("title")
 @click.option("--description", "-d", help="Task description")
@@ -89,7 +65,7 @@ def task_add(
         tags=list(tag),
     )
 
-    service = get_task_service()
+    service = get_services().tasks
     task = service.create(data)
 
     console.print(f"[green]OK[/green] Task created: [bold]{task.title}[/bold]")
@@ -98,8 +74,6 @@ def task_add(
         console.print(f"  Deadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}")
     console.print(f"  Energy: {task.energy_level}/10")
     console.print(f"  Priority: {task.priority}/5")
-
-
 @task.command("list")
 @click.option(
     "--status",
@@ -110,7 +84,7 @@ def task_add(
 @click.option("--limit", type=int, default=20, help="Limit results")
 def task_list(status: str, source: str, limit: int):
     """List tasks"""
-    service = get_task_service()
+    service = get_services().tasks
 
     status_enum = TaskStatus(status) if status else None
     tasks = service.list(status=status_enum, source=source, limit=limit)
@@ -146,13 +120,11 @@ def task_list(status: str, source: str, limit: int):
         )
 
     console.print(table)
-
-
 @task.command("view")
 @click.argument("task_id")
 def task_view(task_id: str):
     """View task details"""
-    service = get_task_service()
+    service = get_services().tasks
     task = service.get(task_id)
 
     if not task:
@@ -192,21 +164,17 @@ def task_view(task_id: str):
         border_style="blue",
     )
     console.print(panel)
-
-
 @task.command("done")
 @click.argument("task_id")
 def task_done(task_id: str):
     """Mark task as completed"""
-    service = get_task_service()
+    service = get_services().tasks
     task = service.complete(task_id)
 
     if task:
         console.print(f"[green]OK[/green] Task completed: {task.title}")
     else:
         console.print(f"[red]Task not found: {task_id}[/red]")
-
-
 @task.command("delete")
 @click.argument("task_id")
 @click.option("--force", is_flag=True, help="Skip confirmation")
@@ -221,19 +189,15 @@ def task_delete(task_id: str, force: bool):
             console.print("Cancelled")
             return
 
-    service = get_task_service()
+    service = get_services().tasks
     if service.delete(task_id):
         console.print(f"[green]OK[/green] Task deleted")
     else:
         console.print(f"[red]Task not found: {task_id}[/red]")
-
-
 @cli.group()
 def note():
     """Note management commands"""
     pass
-
-
 @note.command("add")
 @click.argument("title", required=False)
 @click.option("--content", "-c", help="Note content")
@@ -250,21 +214,19 @@ def note_add(title: str, content: str, tag: tuple):
         tags=list(tag),
     )
 
-    service = get_note_service()
+    service = get_services().notes
     note = service.create(data)
 
     console.print(
         f"[green]OK[/green] Note created: [bold]{note.title or note.id[:8]}[/bold]"
     )
     console.print(f"  ID: {note.id}")
-
-
 @note.command("list")
 @click.option("--tag", help="Filter by tag")
 @click.option("--limit", type=int, default=20)
 def note_list(tag: str, limit: int):
     """List notes"""
-    service = get_note_service()
+    service = get_services().notes
     notes = service.list(tag=tag, limit=limit)
 
     if not notes:
@@ -287,13 +249,11 @@ def note_list(tag: str, limit: int):
         )
 
     console.print(table)
-
-
 @note.command("search")
 @click.argument("query")
 def note_search(query: str):
     """Search notes"""
-    service = get_note_service()
+    service = get_services().notes
     notes = service.search(query)
 
     if not notes:
@@ -304,8 +264,6 @@ def note_search(query: str):
     for n in notes:
         console.print(f"\n[bold]{n.title or n.id[:8]}[/bold]")
         console.print(f"  {n.content[:100]}...")
-
-
 @note.command("delete")
 @click.argument("note_id")
 @click.option("--force", is_flag=True)
@@ -320,19 +278,15 @@ def note_delete(note_id: str, force: bool):
             console.print("Cancelled")
             return
 
-    service = get_note_service()
+    service = get_services().notes
     if service.delete(note_id):
         console.print("[green]OK[/green] Note deleted")
     else:
         console.print(f"[red]Note not found: {note_id}[/red]")
-
-
 @cli.group()
 def know():
     """Knowledge management commands"""
     pass
-
-
 @know.command("add")
 @click.argument("fact")
 @click.option("--category", "-c", help="Category")
@@ -347,21 +301,19 @@ def know_add(fact: str, category: str, source: str, tag: tuple):
         tags=list(tag),
     )
 
-    service = get_knowledge_service()
+    service = get_services().knowledge
     knowledge = service.create(data)
 
     console.print(f"[green]OK[/green] Knowledge added")
     console.print(f"  ID: {knowledge.id}")
     if knowledge.category:
         console.print(f"  Category: {knowledge.category}")
-
-
 @know.command("list")
 @click.option("--category", help="Filter by category")
 @click.option("--limit", type=int, default=20)
 def know_list(category: str, limit: int):
     """List knowledge"""
-    service = get_knowledge_service()
+    service = get_services().knowledge
     items = service.list(category=category, limit=limit)
 
     if not items:
@@ -381,13 +333,11 @@ def know_list(category: str, limit: int):
         )
 
     console.print(table)
-
-
 @know.command("search")
 @click.argument("query")
 def know_search(query: str):
     """Search knowledge"""
-    service = get_knowledge_service()
+    service = get_services().knowledge
     items = service.search(query)
 
     if not items:
@@ -397,26 +347,24 @@ def know_search(query: str):
     console.print(f"[green]Found {len(items)} items:[/green]")
     for k in items:
         console.print(f"\n[cyan]{k.category or 'General'}:[/cyan] {k.fact}")
-
-
 @cli.command()
 def status():
     """Show JARVIS status"""
-    service = get_task_service()
+    service = get_services().tasks
 
     pending = service.count(TaskStatus.PENDING)
     completed_today = len(
         [
             t
             for t in service.list(status=TaskStatus.COMPLETED, limit=100)
-            if t.completed_at and t.completed_at.date() == datetime.utcnow().date()
+            if t.completed_at and t.completed_at.date() == datetime.now(timezone.utc).date()
         ]
     )
     due_today = len(service.get_due_today())
 
     console.print(
         Panel(
-            f"[bold cyan]JARVIS v0.1.0[/bold cyan]\n\n"
+            f"[bold cyan]JARVIS v0.2.0[/bold cyan]\n\n"
             f"[green]Pending tasks:[/green] {pending}\n"
             f"[yellow]Due today:[/yellow] {due_today}\n"
             f"[green]Completed today:[/green] {completed_today}",
@@ -424,8 +372,6 @@ def status():
             border_style="blue",
         )
     )
-
-
 @cli.command()
 @click.argument("text")
 def ask(text: str):
@@ -435,8 +381,6 @@ def ask(text: str):
     jarvis = Jarvis(str(config.db_path))
     response = jarvis.process(text)
     console.print(response)
-
-
 @cli.command()
 def shell():
     """Interactive shell mode"""
@@ -474,27 +418,19 @@ def shell():
         pass
 
     console.print("\n[dim]Goodbye![/dim]")
-
-
 @cli.command()
 def briefing():
     """Get daily briefing"""
-    from jarvis.skills.briefing import BriefingService
-
-    service = BriefingService(get_db())
-    briefing = service.generate()
-    console.print(Panel(briefing, title="Daily Briefing", border_style="cyan"))
-
-
+    svc = get_services()
+    briefing_text = svc.briefing.generate(user_name=config.user_name)
+    console.print(Panel(briefing_text, title="Daily Briefing", border_style="cyan"))
 @cli.command()
 def schedule():
     """Generate energy-aware schedule"""
-    from jarvis.skills.tasks import TaskService
     from jarvis.skills.schedule import ScheduleEngine, Task as ScheduleTask
-    from jarvis.db.models import TaskStatus
 
-    task_service = TaskService(get_db())
-    engine = ScheduleEngine(get_db())
+    task_service = get_services().tasks
+    engine = ScheduleEngine(get_services().db)
 
     pending = task_service.list(status=TaskStatus.PENDING, limit=20)
 
@@ -517,21 +453,16 @@ def schedule():
     schedule = engine.generate_schedule(schedule_tasks, max_hours=5)
 
     console.print(engine.format_schedule(schedule))
-
-
+@cli.command()
 def init():
     """Initialize database"""
     db = get_db()
     db.initialize()
     console.print("[green]OK[/green] Database initialized successfully")
-
-
 @cli.group()
 def university():
     """University integration commands"""
     pass
-
-
 @university.command("setup")
 @click.option("--moodle", required=True, help="Moodle URL")
 def university_setup(moodle: str):
@@ -547,8 +478,6 @@ def university_setup(moodle: str):
         console.print("[green]OK[/green] University connected successfully!")
     except Exception as e:
         console.print(f"[red]Failed to setup: {e}[/red]")
-
-
 @university.command("sync")
 def university_sync():
     """Sync university data"""
@@ -574,8 +503,6 @@ def university_sync():
         console.print("[red]Sync failed:[/red]")
         for error in result.errors:
             console.print(f"  • {error}")
-
-
 @university.command("courses")
 def university_courses():
     """List university courses"""
@@ -596,8 +523,6 @@ def university_courses():
         table.add_row(course.get("code", "-"), course.get("name", "Unknown"))
 
     console.print(table)
-
-
 @university.command("tasks")
 @click.option("--type", help="Filter by type")
 def university_tasks(type: str):
@@ -623,8 +548,6 @@ def university_tasks(type: str):
         table.add_row(a.get("title", "")[:40], a.get("type", "-"), due)
 
     console.print(table)
-
-
 @university.command("status")
 def university_status():
     """Show university connection status"""
@@ -642,8 +565,6 @@ def university_status():
     console.print(
         f"Last sync: {last_sync.strftime('%Y-%m-%d %H:%M') if last_sync else 'Never'}"
     )
-
-
 @cli.command(name="voice")
 @click.option("--test", is_flag=True, help="Test voice interface setup")
 @click.option("--ptt", is_flag=True, help="Push-to-talk mode")
@@ -661,7 +582,7 @@ def voice(test, ptt, continuous):
             jarvis_brain.initialize()
         else:
             jarvis_brain = None
-            
+
         run_voice_interface(mode=mode, test=test, push_to_talk=ptt, brain=jarvis_brain)
     except KeyboardInterrupt:
         console.print("\n[yellow]Voice interface stopped[/yellow]")
@@ -669,19 +590,16 @@ def voice(test, ptt, continuous):
         console.print(f"[red]Error: {e}[/red]")
         logger.error(f"Voice interface error: {e}")
 
-
 @cli.group()
 def profile():
     """User profile commands"""
     pass
-
-
 @profile.command("list")
 def profile_list():
     """Show user profile"""
-    from jarvis.skills.profile import ProfileService
+    
 
-    service = ProfileService(get_db())
+    service = get_services().profile
     p = service.get_profile()
 
     console.print(
@@ -696,40 +614,32 @@ def profile_list():
             title="Profile",
         )
     )
-
-
 @profile.command("set")
 @click.argument("key")
 @click.argument("value")
 def profile_set(key, value):
     """Set profile value"""
-    from jarvis.skills.profile import ProfileService
-    from datetime import date
-
-    service = ProfileService(get_db())
+    
+    service = get_services().profile
 
     if key in ["grad_deadline", "graduation_date"]:
         value = date.fromisoformat(value)
 
     service.set_preference(key, value)
     console.print(f"[green]Set {key} = {value}[/green]")
-
-
 @cli.group()
 def goal():
     """Goal management commands"""
     pass
-
-
 @goal.command("list")
 @click.option("--area", help="Filter by area")
 def goal_list(area):
     """List all goals"""
-    from jarvis.skills.goals import GoalService
-    from jarvis.skills.profile import ProfileService
+    
+    
 
-    goal_service = GoalService(get_db())
-    profile_service = ProfileService(get_db())
+    goal_service = get_services().goals
+    profile_service = get_services().profile
 
     goals = goal_service.get_goals(area_id=area, parent_only=True)
     areas = {a.id: a.name for a in profile_service.get_life_areas()}
@@ -751,8 +661,6 @@ def goal_list(area):
         table.add_row(g.id, g.title[:30], area_name, f"{g.progress}%", deadline)
 
     console.print(table)
-
-
 @goal.command("add")
 @click.argument("title")
 @click.option("--area", help="Life area ID")
@@ -762,10 +670,8 @@ def goal_list(area):
 )
 def goal_add(title, area, deadline, priority):
     """Add a new goal"""
-    from jarvis.skills.goals import GoalService
-    from datetime import date
-
-    service = GoalService(get_db())
+    
+    service = get_services().goals
 
     target = date.fromisoformat(deadline) if deadline else None
 
@@ -774,30 +680,26 @@ def goal_add(title, area, deadline, priority):
     )
 
     console.print(f"[green]Created goal: {title} ({goal_id})[/green]")
-
-
 @goal.command("progress")
 @click.argument("goal_id")
 @click.argument("progress", type=int)
 def goal_progress(goal_id, progress):
     """Update goal progress"""
-    from jarvis.skills.goals import GoalService
+    
 
-    service = GoalService(get_db())
+    service = get_services().goals
     service.update_progress(goal_id, progress)
 
     console.print(f"[green]Updated {goal_id} to {progress}%[/green]")
-
-
 @goal.command("view")
 @click.argument("goal_id")
 def goal_view(goal_id):
     """View goal details"""
-    from jarvis.skills.goals import GoalService
-    from jarvis.skills.profile import ProfileService
+    
+    
 
-    goal_service = GoalService(get_db())
-    profile_service = ProfileService(get_db())
+    goal_service = get_services().goals
+    profile_service = get_services().profile
 
     goal = goal_service.get_goal(goal_id)
     if not goal:
@@ -827,23 +729,235 @@ def goal_view(goal_id):
                 "[green]Done[/green]" if m.completed else "[yellow]Pending[/yellow]"
             )
             console.print(f"  [{status}] {m.title} ({m.progress}%)")
+@goal.group("tasks")
+def goal_tasks():
+    """Task generation from goals"""
+    pass
+@goal_tasks.command("generate")
+@click.argument("goal_id", required=False)
+@click.option(
+    "--all", "generate_all", is_flag=True, help="Generate tasks for all active goals"
+)
+def task_generate(goal_id, generate_all):
+    """Generate actionable tasks from a goal
 
+    Breaks down a goal into specific tasks that can be tracked.
+    """
+    
 
+    service = get_services().goals
+
+    if generate_all:
+        goals = service.get_goals(status="active", parent_only=True)
+        total_tasks = 0
+        for g in goals:
+            existing = service.db.query(
+                "SELECT COUNT(*) as c FROM tasks WHERE goal_id = ?", (g.id,)
+            )
+            if existing and existing[0]["c"] > 0:
+                console.print(
+                    f"[yellow]Skipping {g.title}: tasks already exist[/yellow]"
+                )
+                continue
+
+            task_ids = service.generate_tasks(g.id)
+            total_tasks += len(task_ids)
+            console.print(
+                f"[green]Generated {len(task_ids)} tasks for {g.title}[/green]"
+            )
+
+        console.print(f"\n[green]Total tasks generated: {total_tasks}[/green]")
+        return
+
+    if not goal_id:
+        console.print("[red]Error: provide goal_id or use --all[/red]")
+        return
+
+    existing = service.db.query(
+        "SELECT COUNT(*) as c FROM tasks WHERE goal_id = ?", (goal_id,)
+    )
+    if existing and existing[0]["c"] > 0:
+        console.print(
+            "[yellow]Tasks already exist for this goal. Delete them first.[/yellow]"
+        )
+        return
+
+    task_ids = service.generate_tasks(goal_id)
+    console.print(f"[green]Generated {len(task_ids)} tasks for goal {goal_id}[/green]")
+@goal_tasks.command("list")
+@click.argument("goal_id")
+def task_list(goal_id):
+    """List tasks for a goal"""
+    
+
+    task_service = get_services().tasks
+    rows = task_service.db.query(
+        "SELECT id, title, status, priority, deadline FROM tasks WHERE goal_id = ? ORDER BY deadline",
+        (goal_id,),
+    )
+
+    if not rows:
+        console.print("[yellow]No tasks for this goal[/yellow]")
+        return
+
+    table = Table(title=f"Tasks for Goal ({len(rows)})")
+    table.add_column("ID", style="cyan")
+    table.add_column("Title")
+    table.add_column("Status", style="yellow")
+    table.add_column("Priority")
+    table.add_column("Deadline")
+
+    for row in rows:
+        table.add_row(
+            row["id"],
+            row["title"][:40],
+            row["status"],
+            str(row["priority"]),
+            row["deadline"] or "-",
+        )
+
+    console.print(table)
+@cli.group()
+def daily():
+    """Daily task commands"""
+    pass
+from datetime import date as today_date
+@daily.command("generate")
+@click.option("--limit", default=5, help="Number of tasks to select")
+@click.option("--date", help="Target date (YYYY-MM-DD)")
+def daily_generate(limit, date):
+    """Generate today's task list"""
+    
+    # datetime already imported at top
+
+    service = get_services().daily_tasks
+
+    target = datetime.date.fromisoformat(date) if date else datetime.date.today()
+    task_ids = service.generate_daily(target, limit)
+
+    if not task_ids:
+        console.print("[yellow]Daily tasks already exist for this date[/yellow]")
+    else:
+        console.print(f"[green]Generated {len(task_ids)} tasks for {target}[/green]")
+@daily.command("reroll")
+@click.option("--from-date", help="From date (YYYY-MM-DD)")
+@click.option("--to-date", help="To date (YYYY-MM-DD)")
+def daily_reroll(from_date, to_date):
+    """Roll over undone tasks to another day"""
+    
+    # datetime already imported at top
+
+    service = get_services().daily_tasks
+
+    from_d = (
+        datetime.date.fromisoformat(from_date) if from_date else datetime.date.today()
+    )
+    to_d = (
+        datetime.date.fromisoformat(to_date)
+        if to_date
+        else from_d + datetime.timedelta(days=1)
+    )
+
+    rolled_cnt = service.roll_over_undone(from_d, to_d)
+    console.print(f"[green]Rolled over {rolled_cnt} tasks to {to_d}[/green]")
+@daily.command("history")
+@click.option("--days", default=7, help="Number of days to show")
+def daily_history(days):
+    """View daily task history"""
+    
+
+    service = get_services().daily_tasks
+    history = service.get_history(limit=days)
+
+    if not history:
+        console.print("[yellow]No history yet[/yellow]")
+        return
+
+    table = Table(title=f"Daily Task History ({days} days)")
+    table.add_column("Date", style="cyan")
+    table.add_column("Total", justify="center")
+    table.add_column("Completed", justify="center")
+    table.add_column("Rate", style="green")
+
+    for row in history:
+        rate = (row["completed"] / row["total"] * 100) if row["total"] > 0 else 0
+        table.add_row(
+            row["date"],
+            str(row["total"]),
+            str(row["completed"]),
+            f"{rate:.0f}%",
+        )
+
+    console.print(table)
+@daily.command("complete")
+@click.argument("task_id")
+@click.option("--date", help="Date (YYYY-MM-DD)")
+def daily_complete(task_id, date):
+    """Mark a task as done"""
+    
+    # datetime already imported at top
+
+    service = get_services().daily_tasks
+    target = datetime.date.fromisoformat(date) if date else datetime.date.today()
+
+    service.mark_done(task_id, target)
+    console.print(f"[green]Marked {task_id} as done[/green]")
+@daily.command("list")
+@click.option("--date", help="Date (YYYY-MM-DD)")
+@click.option("--status", help="Filter by status")
+def daily_list(date, status):
+    """Show today's tasks"""
+    
+    # datetime already imported at top
+
+    service = get_services().daily_tasks
+
+    target = datetime.date.fromisoformat(date) if date else datetime.date.today()
+    daily_tasks = service.get_daily_tasks(target, status)
+
+    if not daily_tasks:
+        console.print("[yellow]No daily tasks[/yellow]")
+        return
+
+    table = Table(title=f"Today's Tasks ({len(daily_tasks)})")
+    table.add_column("ID", style="dim", width=8)
+    table.add_column("Task", style="bold")
+    table.add_column("Status", style="yellow")
+    table.add_column("Score", justify="center")
+    table.add_column("Deadline")
+
+    for dt in daily_tasks:
+        task_row = service.db.query_one(
+            "SELECT title, deadline FROM tasks WHERE id = ?",
+            (dt.task_id,),
+        )
+
+        status_color = {
+            "pending": "yellow",
+            "done": "green",
+            "skipped": "red",
+        }.get(dt.status, "white")
+
+        table.add_row(
+            dt.task_id[:8],
+            (task_row["title"][:35] if task_row else "?")[:35],
+            f"[{status_color}]{dt.status}[/{status_color}]",
+            f"{dt.selected_score:.1f}",
+            str(dt.original_deadline)[:10] if dt.original_deadline else "-",
+        )
+
+    console.print(table)
 @cli.group()
 def habit():
     """Habit tracking commands"""
     pass
-
-
 @habit.command("list")
 def habit_list():
     """List all habits"""
-    from jarvis.skills.habits import HabitService
-    from jarvis.skills.profile import ProfileService
-    from datetime import date
-
-    habit_service = HabitService(get_db())
-    profile_service = ProfileService(get_db())
+    
+    
+    habit_service = get_services().habits
+    profile_service = get_services().profile
 
     habits = habit_service.get_habits()
     areas = {a.id: a.name for a in profile_service.get_life_areas()}
@@ -872,8 +986,6 @@ def habit_list():
         )
 
     console.print(table)
-
-
 @habit.command("add")
 @click.argument("name")
 @click.option("--frequency", default="daily", help="Frequency: daily, weekly")
@@ -882,9 +994,9 @@ def habit_list():
 @click.option("--duration", type=int, help="Duration in minutes")
 def habit_add(name, frequency, time, area, duration):
     """Add a new habit"""
-    from jarvis.skills.habits import HabitService
+    
 
-    service = HabitService(get_db())
+    service = get_services().habits
     habit_id = service.create_habit(
         name=name,
         frequency=frequency,
@@ -894,41 +1006,35 @@ def habit_add(name, frequency, time, area, duration):
     )
 
     console.print(f"[green]Created habit: {name} ({habit_id})[/green]")
-
-
 @habit.command("log")
 @click.argument("habit_id")
 @click.option("--pages", type=int, help="Pages completed (for Quran)")
 @click.option("--duration", type=int, help="Duration in minutes")
 def habit_log(habit_id, pages, duration):
     """Log habit completion"""
-    from jarvis.skills.habits import HabitService
+    
 
-    service = HabitService(get_db())
+    service = get_services().habits
     service.log_habit(habit_id, pages=pages, duration_minutes=duration)
 
     console.print(f"[green]Logged habit {habit_id}[/green]")
-
-
 @habit.command("check")
 @click.argument("habit_id")
 def habit_check(habit_id):
     """Quick check for habit"""
-    from jarvis.skills.habits import HabitService
+    
 
-    service = HabitService(get_db())
+    service = get_services().habits
     service.check_habit(habit_id)
 
     console.print(f"[green]Marked habit {habit_id} as complete for today[/green]")
-
-
 @habit.command("stats")
 @click.argument("habit_id", required=False)
 def habit_stats(habit_id):
     """Show habit statistics"""
-    from jarvis.skills.habits import HabitService
+    
 
-    service = HabitService(get_db())
+    service = get_services().habits
 
     if habit_id:
         stats = service.get_stats(habit_id)
@@ -953,14 +1059,10 @@ def habit_stats(habit_id):
             console.print(
                 f"  {h['name']}: {h['current_streak']}d streak ({h['last_30_days_completion']}%)"
             )
-
-
 @cli.group()
 def review():
     """Review commands"""
     pass
-
-
 @review.command("daily")
 @click.option("--mood", type=int, help="Mood 1-10")
 @click.option("--energy", type=int, help="Energy 1-10")
@@ -968,22 +1070,20 @@ def review():
 @click.option("--notes", help="Notes")
 def review_daily(mood, energy, productivity, notes):
     """Create daily review"""
-    from jarvis.skills.reviews import ReviewService
+    
 
-    service = ReviewService(get_db())
+    service = get_services().reviews
     service.create_daily_review(
         mood=mood, energy_level=energy, productivity_score=productivity, notes=notes
     )
 
     console.print("[green]Daily review saved[/green]")
-
-
 @review.command("weekly")
 def review_weekly():
     """Show weekly summary"""
-    from jarvis.skills.reviews import ReviewService
+    
 
-    service = ReviewService(get_db())
+    service = get_services().reviews
     summary = service.generate_weekly_summary()
     stats = service.get_this_week_stats()
 
@@ -997,76 +1097,26 @@ def review_weekly():
             title="Weekly Review",
         )
     )
-
-
 @cli.group()
 def accountability():
     """Accountability commands"""
     pass
-
-
 @accountability.command("today")
 def accountability_today():
     """Show today's accountability"""
-    from jarvis.skills.profile import ProfileService
-    from jarvis.skills.goals import GoalService
-    from jarvis.skills.habits import HabitService
-    from jarvis.skills.reviews import ReviewService
-    from jarvis.skills.accountability import AccountabilityEngine
-
-    profile_service = ProfileService(get_db())
-    goal_service = GoalService(get_db())
-    habit_service = HabitService(get_db())
-    review_service = ReviewService(get_db())
-
-    engine = AccountabilityEngine(
-        get_db(), profile_service, goal_service, habit_service, review_service
-    )
-
+    engine = get_services().accountability
     message = engine.get_today_preview()
     console.print(Panel(message, title="Today's Focus"))
-
-
 @accountability.command("push")
 def accountability_push():
     """Get motivational push"""
-    from jarvis.skills.profile import ProfileService
-    from jarvis.skills.goals import GoalService
-    from jarvis.skills.habits import HabitService
-    from jarvis.skills.reviews import ReviewService
-    from jarvis.skills.accountability import AccountabilityEngine
-
-    profile_service = ProfileService(get_db())
-    goal_service = GoalService(get_db())
-    habit_service = HabitService(get_db())
-    review_service = ReviewService(get_db())
-
-    engine = AccountabilityEngine(
-        get_db(), profile_service, goal_service, habit_service, review_service
-    )
-
+    engine = get_services().accountability
     message = engine.get_motivation_message()
     console.print(f"[bold yellow]{message}[/bold yellow]")
-
-
 @accountability.command("overdue")
 def accountability_overdue():
     """Show overdue items"""
-    from jarvis.skills.profile import ProfileService
-    from jarvis.skills.goals import GoalService
-    from jarvis.skills.habits import HabitService
-    from jarvis.skills.reviews import ReviewService
-    from jarvis.skills.accountability import AccountabilityEngine
-
-    profile_service = ProfileService(get_db())
-    goal_service = GoalService(get_db())
-    habit_service = HabitService(get_db())
-    review_service = ReviewService(get_db())
-
-    engine = AccountabilityEngine(
-        get_db(), profile_service, goal_service, habit_service, review_service
-    )
-
+    engine = get_services().accountability
     messages = engine.get_overdue_warning()
 
     if messages:
@@ -1074,75 +1124,54 @@ def accountability_overdue():
             console.print(Panel(msg, style="red"))
     else:
         console.print("[green]No overdue items[/green]")
-
-
 @accountability.command("countdown")
 def accountability_countdown():
     """Show graduation countdown"""
-    from jarvis.skills.profile import ProfileService
-    from jarvis.skills.goals import GoalService
-    from jarvis.skills.habits import HabitService
-    from jarvis.skills.reviews import ReviewService
-    from jarvis.skills.accountability import AccountabilityEngine
-
-    profile_service = ProfileService(get_db())
-    goal_service = GoalService(get_db())
-    habit_service = HabitService(get_db())
-    review_service = ReviewService(get_db())
-
-    engine = AccountabilityEngine(
-        get_db(), profile_service, goal_service, habit_service, review_service
-    )
+    engine = get_services().accountability
 
     message = engine.get_graduation_countdown()
     if message:
         console.print(Panel(message, title="Graduation Countdown", style="yellow"))
     else:
         console.print("[yellow]No graduation date set[/yellow]")
-
-
 @cli.command("setup-life")
 def setup_life():
     """Initial setup for life management"""
     from jarvis.skills.setup_life import run_initial_setup
 
     run_initial_setup()
-
-
 @cli.command(name="dashboard")
-def dashboard():
+@click.option("--port", type=int, default=8080, help="Dashboard port")
+@click.option("--host", default="0.0.0.0", help="Dashboard host")
+@click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
+def dashboard_web(port, host, no_browser):
     """Start the JARVIS dashboard (web UI)"""
-    import subprocess
-    import sys
-    import os
-    from pathlib import Path
+    from jarvis.dashboard.backend.main import run_server
 
-    dashboard_dir = Path(__file__).parent / "dashboard"
-    start_script = dashboard_dir / "start.sh"
-    start_script.chmod(0o755)
+    console.print(
+        Panel(
+            f"[bold cyan]JARVIS Dashboard[/bold cyan]\n\n"
+            f"[green]URL:[/green] http://localhost:{port}\n"
+            f"[green]Host:[/green] {host}\n"
+            f"[green]Port:[/green] {port}\n\n"
+            f"Press Ctrl+C to stop.",
+            title="Dashboard",
+            border_style="cyan",
+        )
+    )
 
-    console.print("[cyan]Starting JARVIS Dashboard...[/cyan]")
-    console.print("")
-    console.print("[yellow]Dashboard will open at:[/yellow] http://localhost:8080")
-    console.print("[yellow]Press Ctrl+C to stop[/yellow]")
-    console.print("")
+    if not no_browser:
+        import webbrowser
+        import threading
+        threading.Timer(1.5, lambda: webbrowser.open(f"http://localhost:{port}")).start()
 
     try:
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(dashboard_dir.parent.parent)
-        subprocess.run(["bash", str(start_script)], cwd=str(dashboard_dir), env=env)
+        run_server(host=host, port=port)
     except KeyboardInterrupt:
-        console.print("\n[green]Dashboard stopped[/green]")
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        logger.error(f"Dashboard error: {e}")
-
-
+        console.print("\n[yellow]Dashboard stopped[/yellow]")
 def main():
     """Entry point."""
     setup_logger(level=config.log_level, debug=config.debug)
     cli()
-
-
 if __name__ == "__main__":
     main()

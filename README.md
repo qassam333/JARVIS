@@ -204,6 +204,89 @@ Priority order for evenings:
 3. Python Practice
 4. English Study
 
+## Goal-to-Tasks System
+
+JARVIS can break down goals into actionable tasks automatically:
+
+```bash
+# Add a new goal
+jarvis goal add "Build Portfolio" --area career --deadline 2026-12-01 --priority high
+
+# Generate tasks from the goal
+jarvis goal tasks generate <goal-id>
+
+# Or generate tasks for ALL goals
+jarvis goal tasks generate --all
+
+# List tasks for a specific goal
+jarvis goal tasks list <goal-id>
+```
+
+The generator creates phase-based tasks with deadlines:
+- **Career goals** → Graduation, UE5, Job Search, Portfolio specific phases
+- **Project goals** → LINKIT, Mansaf, Afterfall specific phases
+- **Learning goals** → Python, English, Third Language specific phases
+
+Each task is linked to the goal via `goal_id` for tracking.
+
+## Daily Task Selection
+
+JARVIS selects the best tasks for each day based on:
+
+1. **Priority Score** = Base priority + Deadline urgency + Overdue penalty
+2. **Sequential Order** - Next task unlocks only when previous is done
+3. **Goal Diversity** - Mix of different goals per day
+
+```bash
+# Generate today's task list (auto-selects top 5)
+jarvis daily generate
+
+# Generate with custom limit
+jarvis daily generate --limit 3
+
+# List today's tasks
+jarvis daily list
+
+# Mark task as done
+jarvis daily complete <task-id>
+
+# Roll over undone tasks to tomorrow
+jarvis daily reroll
+
+# View history
+jarvis daily history
+```
+
+### Priority Scoring Algorithm
+
+```
+score = base_priority
+
+if deadline passed:
+    score += overdue_days * 3 (overdue penalty)
+else if deadline within 7 days:
+    score += (7 - days_until) / 7 * 2 (urgency boost)
+```
+
+### Daily Workflow
+
+```bash
+# Morning: Generate today's tasks
+jarvis daily generate
+
+# Check what's due
+jarvis daily list
+
+# Also shows in briefing
+jarvis briefing
+
+# Complete tasks as you go
+jarvis daily complete <task-id>
+
+# End of day: Roll over undone
+jarvis daily reroll
+```
+
 ## Command Reference
 
 ### Task Management

@@ -9,7 +9,9 @@ from jarvis.voice.audio import AudioCapture, AudioConfig
 from jarvis.voice.stt import SpeechToText, STTConfig
 from jarvis.voice.tts import TextToSpeech, TTSConfig
 from jarvis.voice.wake_word import WakeWordDetector, WakeWordConfig, PushToTalk
+from jarvis.voice.sounds import play_wake_beep, play_success_beep, play_error_beep, play_listening_beep
 from jarvis.utils.logger import get_logger
+from jarvis.utils.config import config as app_config
 
 logger = get_logger("voice.cli")
 
@@ -32,9 +34,14 @@ class VoiceInterface:
             voice_dir="./voices",
         )
 
+        # Build wake word keywords from config + defaults
+        config_wake_word = app_config.wake_word.lower()
+        default_keywords = ["hey gg", "gg", "hey jarvis", "jarvis", "hey jarvi", "jarvi" , "yo gg", "yo jarvis", "yo jarvi"]
+        keywords = list(set(default_keywords + [config_wake_word]))
+
         self.wake_word_config = WakeWordConfig(
             engine="simple",
-            keywords=["hey gg", "gg", "hey jarvis", "jarvis", "hey jarvi", "jarvi"],
+            keywords=keywords,
             sensitivity=0.5,
             porcupine_access_key=None,
         )
@@ -95,7 +102,8 @@ class VoiceInterface:
             return "Brain not connected. Cannot process command."
 
         response = self.brain.process(text)
-        return response.message if hasattr(response, "message") else str(response)
+        # Jarvis.process() returns a str directly
+        return response if isinstance(response, str) else str(response)
 
     def conversation_loop(self):
         pass # Now handled in main thread loop safely
@@ -144,8 +152,12 @@ class VoiceInterface:
                 # 2. Wake word heard! STOP the ALSA mic stream fully
                 self.wake_word.stop()
                 
+                # Instant audio feedback — much faster than TTS
+                play_wake_beep()
+
                 # Speak confirmation
                 self.speak("Yes?")
+                play_listening_beep()
 
                 # 3. Open a NEW clean ALSA stt mic stream safely for exactly one command
                 text = self.listen()
@@ -160,6 +172,7 @@ class VoiceInterface:
                     response = self.process_command(text)
                     print(f"JARVIS: {response}")
                     self.speak(response)
+                    play_success_beep()
 
         except KeyboardInterrupt:
             self.stop()

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="JARVIS Dashboard - Your personal AI assistant control center">
+    <title>JARVIS Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="header-left">
+            <div class="logo">J</div>
+            <h1><span>JARVIS</span> Dashboard</h1>
+        </div>
+        <div class="header-right">
+            <div class="status-pill" id="systemStatus">
+                <div class="status-dot"></div>
+                <span>Online</span>
+            </div>
+            <div class="clock" id="clock"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+
+        <!-- Stats Row -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="stat-value" id="statPending">-</div>
+                <div class="stat-label">Pending Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value green" id="statCompleted">-</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value cyan" id="statHabits">-</div>
+                <div class="stat-label">Active Habits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value amber" id="statGoals">-</div>
+                <div class="stat-label">Active Goals</div>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid" style="margin-top: 20px;">
+
+            <!-- Briefing -->
+            <div class="card card-briefing" id="briefingCard">
+                <div class="card-title"><span class="icon">&#9788;</span> Daily Briefing</div>
+                <div class="briefing-quick" id="briefingQuick">Loading...</div>
+                <div class="briefing-content" id="briefingContent"></div>
+            </div>
+
+            <!-- Tasks -->
+            <div class="card card-tasks" id="tasksCard">
+                <div class="card-title"><span class="icon">&#9745;</span> Tasks</div>
+                <ul class="task-list" id="taskList">
+                    <li class="loading"><div class="loading-spinner"></div></li>
+                </ul>
+            </div>
+
+            <!-- Habits -->
+            <div class="card" id="habitsCard">
+                <div class="card-title"><span class="icon">&#9734;</span> Habits</div>
+                <div class="habit-list" id="habitList">
+                    <div class="loading"><div class="loading-spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- Goals -->
+            <div class="card" id="goalsCard">
+                <div class="card-title"><span class="icon">&#9650;</span> Goals</div>
+                <div class="goal-list" id="goalList">
+                    <div class="loading"><div class="loading-spinner"></div></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Refresh indicator -->
+    <div class="refresh-indicator" id="refreshIndicator">
+        <span>Auto-refresh: <span id="refreshCountdown">30</span>s</span>
+    </div>
+
+    <script>
+    // ═══════════════════════════════════════════
+    //  JARVIS Dashboard — Vanilla JS
+    // ═══════════════════════════════════════════
+
+    const API = '';  // Same origin
+    let refreshTimer = 30;
+    let refreshInterval;
+
+    // ── Clock ──
+    function updateClock() {
+        const now = new Date();
+        const opts = { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        document.getElementById('clock').textContent = now.toLocaleString('en-US', opts);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Fetch helpers ──
+    async function fetchJSON(url) {
+        try {
+            const res = await fetch(API + url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.error(`Fetch ${url} failed:`, e);
+            return null;
+        }
+    }
+
+    async function postJSON(url) {
+        try {
+            const res = await fetch(API + url, { method: 'POST' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.error(`POST ${url} failed:`, e);
+            return null;
+        }
+    }
+
+    // ── System Status ──
+    async function loadSystemStatus() {
+        const data = await fetchJSON('/api/system');
+        if (!data) {
+            document.getElementById('systemStatus').innerHTML = '<div class="status-dot" style="background:var(--accent-red)"></div><span>Offline</span>';
+            return;
+        }
+
+        document.getElementById('statPending').textContent = data.stats.pending_tasks;
+        document.getElementById('statCompleted').textContent = data.stats.completed_tasks;
+        document.getElementById('statHabits').textContent = data.stats.active_habits;
+        document.getElementById('statGoals').textContent = data.stats.active_goals;
+    }
+
+    // ── Briefing ──
+    async function loadBriefing() {
+        const data = await fetchJSON('/api/briefing');
+        if (!data) return;
+
+        document.getElementById('briefingQuick').textContent = data.quick || '';
+        document.getElementById('briefingContent').textContent = data.briefing || '';
+    }
+
+    // ── Tasks ──
+    async function loadTasks() {
+        const data = await fetchJSON('/api/tasks?status=pending&limit=15');
+        const list = document.getElementById('taskList');
+
+        if (!data || !data.tasks.length) {
+            list.innerHTML = '<div class="empty-state"><div class="icon">&#9745;</div>All tasks completed!</div>';
+            return;
+        }
+
+        list.innerHTML = data.tasks.map(t => {
+            const priorityLabel = ['', 'Low', 'Low', 'Med', 'High', 'Critical'][t.priority] || '';
+            const deadlineStr = t.deadline ? new Date(t.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+
+            return `
+                <li class="task-item" data-id="${t.id}">
+                    <div class="task-check" onclick="completeTask('${t.id}', this)" title="Mark done"></div>
+                    <div class="task-info">
+                        <div class="task-title">${escapeHTML(t.title)}</div>
+                        <div class="task-meta">
+                            ${t.priority >= 4 ? `<span class="task-badge badge-priority">P${t.priority}</span>` : ''}
+                            <span class="task-badge badge-energy">E${t.energy_level}</span>
+                            ${deadlineStr ? `<span class="task-badge badge-deadline">${deadlineStr}</span>` : ''}
+                        </div>
+                    </div>
+                </li>
+            `;
+        }).join('');
+    }
+
+    async function completeTask(id, el) {
+        el.classList.add('done');
+        const item = el.closest('.task-item');
+        item.classList.add('completed');
+
+        const result = await postJSON(`/api/tasks/${id}/complete`);
+        if (result && result.success) {
+            setTimeout(() => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    item.remove();
+                    loadSystemStatus();
+                }, 300);
+            }, 500);
+        }
+    }
+
+    // ── Habits ──
+    async function loadHabits() {
+        const data = await fetchJSON('/api/habits');
+        const container = document.getElementById('habitList');
+
+        if (!data || !data.habits.length) {
+            container.innerHTML = '<div class="empty-state"><div class="icon">&#9734;</div>No habits tracked yet</div>';
+            return;
+        }
+
+        container.innerHTML = data.habits.map(h => {
+            const statusClass = h.completed_today ? 'done' : 'pending';
+            const streakText = h.current_streak > 0 ? `<span class="fire">&#128293;</span> ${h.current_streak} day streak` : 'No streak';
+
+            return `
+                <div class="habit-item" data-id="${h.id}">
+                    <div class="habit-icon ${statusClass}">${h.completed_today ? '&#10003;' : '&#9675;'}</div>
+                    <div class="habit-info">
+                        <div class="habit-name">${escapeHTML(h.name)}</div>
+                        <div class="habit-streak">${streakText}</div>
+                    </div>
+                    <div class="habit-toggle ${statusClass}" onclick="toggleHabit('${h.id}', ${h.completed_today}, this)"></div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function toggleHabit(id, isDone, el) {
+        if (isDone) {
+            // Unlog
+            await fetch(API + `/api/habits/${id}/log`, { method: 'DELETE' });
+        } else {
+            // Log
+            await postJSON(`/api/habits/${id}/log`);
+        }
+        await loadHabits();
+        await loadSystemStatus();
+    }
+
+    // ── Goals ──
+    async function loadGoals() {
+        const data = await fetchJSON('/api/goals');
+        const container = document.getElementById('goalList');
+
+        if (!data || !data.goals.length) {
+            container.innerHTML = '<div class="empty-state"><div class="icon">&#9650;</div>No goals set</div>';
+            return;
+        }
+
+        container.innerHTML = data.goals.filter(g => g.status === 'active').map(g => {
+            const deadline = g.target_date ? new Date(g.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+            return `
+                <div class="goal-item">
+                    <div class="goal-header">
+                        <div class="goal-title">${escapeHTML(g.title)}</div>
+                        <div class="goal-percent">${g.progress}%</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${g.progress}%"></div>
+                    </div>
+                    ${deadline ? `<div class="goal-deadline">${deadline}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ── Utilities ──
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ── Auto Refresh ──
+    function startAutoRefresh() {
+        refreshTimer = 30;
+        clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => {
+            refreshTimer--;
+            document.getElementById('refreshCountdown').textContent = refreshTimer;
+            if (refreshTimer <= 0) {
+                refreshTimer = 30;
+                loadAll();
+            }
+        }, 1000);
+    }
+
+    // ── Load All ──
+    async function loadAll() {
+        await Promise.all([
+            loadSystemStatus(),
+            loadBriefing(),
+            loadTasks(),
+            loadHabits(),
+            loadGoals(),
+        ]);
+    }
+
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAll();
+        startAutoRefresh();
+    });
+    </script>
+
+</body>
+</html>

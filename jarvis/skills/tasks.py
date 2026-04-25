@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pathlib import Path
 
@@ -120,53 +120,45 @@ class TaskService:
 
     def update(self, task_id: str, data: TaskUpdate) -> Optional[Task]:
         """Update a task."""
-        updates = []
-        params = []
+        updates = {}
 
         if data.title is not None:
-            updates.append("title = ?")
-            params.append(data.title)
+            updates["title"] = data.title
 
         if data.description is not None:
-            updates.append("description = ?")
-            params.append(data.description)
+            updates["description"] = data.description
 
         if data.energy_level is not None:
-            updates.append("energy_level = ?")
-            params.append(data.energy_level)
+            updates["energy_level"] = data.energy_level
 
         if data.deadline is not None:
-            updates.append("deadline = ?")
-            params.append(data.deadline.isoformat() if data.deadline else None)
+            updates["deadline"] = data.deadline.isoformat() if data.deadline else None
 
         if data.priority is not None:
-            updates.append("priority = ?")
-            params.append(data.priority)
+            updates["priority"] = data.priority
 
         if data.status is not None:
-            updates.append("status = ?")
-            updates.append("completed_at = ?")
             status_val = (
                 data.status.value
                 if isinstance(data.status, TaskStatus)
                 else data.status
             )
-            params.append(status_val)
-            params.append(
-                datetime.utcnow().isoformat() if status_val == "completed" else None
+            updates["status"] = status_val
+            updates["completed_at"] = (
+                datetime.now(timezone.utc).isoformat() if status_val == "completed" else None
             )
 
         if data.tags is not None:
-            updates.append("tags = ?")
-            params.append(json.dumps(data.tags))
+            updates["tags"] = json.dumps(data.tags)
 
         if not updates:
             return self.get(task_id)
 
-        params.append(task_id)
+        set_clause = ", ".join([f"{k} = ?" for k in updates.keys()])
+        params = list(updates.values()) + [task_id]
 
         self.db.execute(
-            f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", tuple(params)
+            f"UPDATE tasks SET {set_clause} WHERE id = ?", tuple(params)
         )
 
         logger.info(f"Task updated: {task_id}")
@@ -182,7 +174,7 @@ class TaskService:
 
     def delete(self, task_id: str) -> bool:
         """Delete a task."""
-        count = self.db.delete("DELETE FROM tasks WHERE id = ?", (task_id,))
+        count = self.db.delete("tasks", "id = ?", (task_id,))
 
         if count > 0:
             logger.info(f"Task deleted: {task_id}")
@@ -191,7 +183,7 @@ class TaskService:
 
     def get_due_today(self) -> list[Task]:
         """Get tasks due today."""
-        today = datetime.utcnow().date().isoformat()
+        today = datetime.now(timezone.utc).date().isoformat()
         rows = self.db.query(
             """
             SELECT * FROM tasks 
@@ -219,7 +211,7 @@ class TaskService:
             tags=json.loads(row["tags"]) if row["tags"] else [],
             created_at=datetime.fromisoformat(row["created_at"])
             if row["created_at"]
-            else datetime.utcnow(),
+            else datetime.now(timezone.utc),
             completed_at=datetime.fromisoformat(row["completed_at"])
             if row["completed_at"]
             else None,

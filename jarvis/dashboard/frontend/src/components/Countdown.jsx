@@ -19,7 +19,7 @@ export default function Countdown({ daysLeft, isGradDay }) {
   const getColor = () => {
     if (daysLeft <= 7) return "text-danger";
     if (daysLeft <= 30) return "text-warning";
-    return "text-cyan";
+    return "text-primary";
   };
 
   return (

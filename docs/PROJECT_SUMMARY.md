@@ -16,7 +16,18 @@ A modular AI assistant inspired by Iron Man's JARVIS. Manages tasks, schedules, 
 | **Voice STT** | Whisper.cpp | 100% local, no cloud |
 | **Voice TTS** | Piper | Local TTS |
 | **Web Scraping** | httpx + BeautifulSoup4 | Async, lightweight |
-| **API** | FastAPI (optional) | REST API for web UI |
+| **API** | FastAPI | REST API for web UI |
+| **Web UI** | React + Vite + Tailwind | Modern Dashboard Interface |
+
+## Latest Updates (v0.2.0)
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **Daily Task Selection** | Auto-selects daily tasks based on priority + deadline urgency |
+| 2 | **Goal → Tasks Generator** | Breaks goals into actionable phase-based tasks |
+| 3 | **Sequential Unlocking** | Next task unlocks only when previous is done |
+| 4 | **Auto-Rollover** | Undone tasks automatically move to next day |
+| 5 | **Daily Tasks Table** | Tracks daily task selection with scoring |
 
 ---
 
@@ -27,7 +38,7 @@ A modular AI assistant inspired by Iron Man's JARVIS. Manages tasks, schedules, 
 | 1 | **Migration System** | Safely evolve schema without losing data |
 | 2 | **Logging Layer** | Debugging, auditing, structured JSON logs |
 | 3 | **Validation (Pydantic v2)** | Strict field validation |
-| 4 | **API Layer Structure** | REST API for future web UI |
+| 4 | **API Layer Structure** | REST API for web UI |
 | 5 | **Environment Variables** | Config via env vars for production |
 | 6 | **Health Check Endpoint** | System monitoring for Docker |
 | 7 | **.gitignore** | Never commit secrets or data |
@@ -93,10 +104,14 @@ JARVIS/
 │   ├── __init__.py
 │   ├── main.py                 # Entry point
 │   │
-│   ├── core/                   # Core brain (TODO)
+│   ├── core/                   # Core brain
 │   │   ├── brain.py
 │   │   ├── memory.py
 │   │   └── intent_parser.py
+│   │
+│   ├── dashboard/              # Web Dashboard Interface
+│   │   ├── frontend/           # React + Vite
+│   │   └── backend/            # FastAPI Server
 │   │
 │   ├── db/                     # Database layer
 │   │   ├── database.py         # SQLite connection
@@ -106,7 +121,7 @@ JARVIS/
 │   │   │       └── __init__.py
 │   │   └── encryption.py      # (V2)
 │   │
-│   ├── skills/                 # Skills/actions (TODO)
+│   ├── skills/                 # Skills/actions
 │   │   ├── tasks.py
 │   │   ├── notes.py
 │   │   ├── knowledge.py
@@ -121,7 +136,7 @@ JARVIS/
 │   │   ├── wake_word.py      # Wake word detection
 │   │   └── voice_cli.py      # Main voice loop
 │   │
-│   ├── api/                    # REST API (TODO)
+│   ├── api/                    # Core API hooks
 │   │   ├── __init__.py
 │   │   └── health.py
 │   │
@@ -130,7 +145,7 @@ JARVIS/
 │       ├── config.py           # Config + env vars
 │       └── logger.py           # Structured logging
 │
-├── tests/                      # Unit tests (TODO)
+├── tests/                      # Unit tests
 ├── data/                      # SQLite DB location
 │
 ├── config.yaml                 # Configuration
@@ -185,32 +200,54 @@ JARVIS/
 5. ✅ Health check endpoint
 6. ✅ API structure
 
-### Phase 1: Core Foundation (NEXT)
-1. Database models
-2. Task CRUD
-3. CLI interface
+### ✅ Phase 1: Core Foundation (DONE)
+1. ✅ Database models
+2. ✅ Task CRUD
+3. ✅ CLI interface
 
-### Phase 2: Core Brain
-4. Intent parser
-5. Decision engine
-6. Memory engine
+### ✅ Phase 2: Life Management (DONE)
+4. ✅ Goals system with milestones
+5. ✅ Habit tracking with streaks
+6. ✅ User profile
+7. ✅ Daily/weekly reviews
+8. ✅ Accountability system
 
-### Phase 3: Skills
-7. Notes system
-8. Knowledge base
-9. Schedule engine
+### ✅ Phase 3: Daily Task Selection (NEW v0.2.0)
+9. ✅ Daily task service with priority scoring
+10. ✅ Goal→Tasks generator
+11. ✅ Sequential task unlocking
+12. ✅ Auto-rollover system
+13. ✅ Daily briefing integration
 
-### Phase 4: University Integration
-10. Moodle scraper
-11. Credential management
-12. Task import
+Commands:
+- `jarvis daily generate` - Generate today's tasks
+- `jarvis daily list` - Show today's tasks
+- `jarvis daily complete <id>` - Mark done
+- `jarvis daily reroll` - Roll to tomorrow
+- `jarvis goal tasks generate <id>` - Generate from goal
+- `jarvis goal tasks list <id>` - List goal tasks
 
-### Phase 5: Voice (DONE)
-13. Whisper STT - `jarvis/voice/stt.py`
-14. Piper TTS - `jarvis/voice/tts.py`
-15. Wake word - `jarvis/voice/wake_word.py`
-16. Audio utilities - `jarvis/voice/audio.py`
-17. Voice CLI - `jarvis/voice/voice_cli.py`
+### ✅ Phase 4: Core Brain (DONE)
+14. ✅ Intent parser
+15. ✅ Decision engine
+16. ✅ Memory engine
+
+### ✅ Phase 5: Skills (DONE)
+17. ✅ Notes system
+18. ✅ Knowledge base
+19. ✅ Schedule engine
+
+### Phase 6: University Integration
+20. Moodle scraper
+21. Credential management
+22. Task import
+
+### Phase 7: Voice (DONE)
+23. Whisper STT - `jarvis/voice/stt.py`
+24. Piper TTS - `jarvis/voice/tts.py`
+25. Wake word - `jarvis/voice/wake_word.py`
+26. Audio utilities - `jarvis/voice/audio.py`
+27. Voice CLI - `jarvis/voice/voice_cli.py`
 
 Commands:
 - `jarvis voice` - Wake word mode
@@ -218,9 +255,14 @@ Commands:
 - `jarvis voice --continuous` - Continuous listening
 - `jarvis voice --test` - Test audio setup
 
-### Phase 6: Deployment (PENDING)
-18. Docker
-19. Homelab migration
+### ✅ Phase 8: Web Dashboard (DONE)
+28. ✅ React Frontend (O4 Studio Branding)
+29. ✅ FastAPI Backend Server
+30. ✅ Dashboard Widget Integrations
+
+### Phase 9: Deployment (PENDING)
+31. Docker
+32. Homelab migration
 
 ---
 

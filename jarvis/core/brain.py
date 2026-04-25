@@ -61,7 +61,14 @@ class DecisionEngine:
 
     def process(self, intent: Intent) -> Response:
         """Process an intent and return response."""
-        logger.info(f"Processing intent: {intent.intent.value}")
+        logger.info(f"Processing intent: {intent.intent.value} (confidence: {intent.confidence:.2f})")
+
+        # Very low confidence — ask for clarification
+        if intent.confidence < 0.4 and intent.intent == IntentType.UNKNOWN:
+            return Response(
+                success=False,
+                message="I'm not sure what you mean. Could you rephrase? Say 'help' for available commands.",
+            )
 
         handler = self._handlers.get(intent.intent)
 
@@ -72,7 +79,13 @@ class DecisionEngine:
                 message=f"I don't know how to handle '{intent.intent.value}'",
             )
 
-        return handler.execute(intent, self._context)
+        response = handler.execute(intent, self._context)
+
+        # Add confidence note for fuzzy matches
+        if 0.4 <= intent.confidence < 0.8 and response.success:
+            response.message = f"(I think you meant: {intent.intent.value})\n{response.message}"
+
+        return response
 
 
 class Context:

@@ -1,6 +1,6 @@
 """Pydantic models for JARVIS data structures."""
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator
@@ -63,7 +63,7 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.PENDING
     source: TaskSource = TaskSource.MANUAL
     tags: list[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
 
     model_config = {"use_enum_values": True}
@@ -92,8 +92,8 @@ class Note(BaseModel):
     title: Optional[str] = None
     content: str
     tags: list[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class KnowledgeCreate(BaseModel):
@@ -122,7 +122,7 @@ class Knowledge(BaseModel):
     category: Optional[str] = None
     source: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DailyLogCreate(BaseModel):

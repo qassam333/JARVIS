@@ -1,17 +1,68 @@
 """Audio utilities for voice interface."""
 
 import io
+import os
 import wave
+import subprocess
+import sys
 import numpy as np
 from typing import Optional, Generator
 from dataclasses import dataclass
 
-try:
-    import pyaudio
+def _safe_pyaudio_init():
+    """Try to import pyaudio safely, working around PortAudio SIGFPE on some systems.
+    
+    Some audio devices (e.g. NVidia HDMI) cause PortAudio to crash with SIGFPE
+    during device enumeration. We detect this and restrict ALSA to safe cards.
+    """
+    # First try: just import and init normally
+    try:
+        import pyaudio
+        # Quick test: can we init without crashing?
+        # Use a subprocess so a crash doesn't kill us
+        result = subprocess.run(
+            [sys.executable, "-c", "import pyaudio; p = pyaudio.PyAudio(); p.terminate()"],
+            capture_output=True, timeout=10
+        )
+        if result.returncode == 0:
+            return pyaudio, True
+        
+        # Crashed — try restricting to specific ALSA cards
+        # Find a card that works by testing each one
+        try:
+            cards_path = "/proc/asound/cards"
+            if os.path.exists(cards_path):
+                with open(cards_path) as f:
+                    content = f.read()
+                # Extract card numbers
+                import re
+                card_nums = re.findall(r'^\s*(\d+)\s+\[', content, re.MULTILINE)
+                
+                for card_num in card_nums:
+                    env = os.environ.copy()
+                    env["ALSA_CARD"] = card_num
+                    result = subprocess.run(
+                        [sys.executable, "-c", "import pyaudio; p = pyaudio.PyAudio(); p.terminate()"],
+                        capture_output=True, timeout=10, env=env
+                    )
+                    if result.returncode == 0:
+                        os.environ["ALSA_CARD"] = card_num
+                        return pyaudio, True
+        except Exception:
+            pass
+        
+        # Last resort: disable device enumeration issues by setting a default
+        os.environ.setdefault("ALSA_CARD", "0")
+        return pyaudio, True
+        
+    except ImportError:
+        return None, False
+    except Exception:
+        return None, False
 
-    PYAUDIO_AVAILABLE = True
-except ImportError:
-    PYAUDIO_AVAILABLE = False
+_pyaudio_module, PYAUDIO_AVAILABLE = _safe_pyaudio_init()
+if _pyaudio_module:
+    pyaudio = _pyaudio_module
 
 from jarvis.utils.logger import get_logger
 
@@ -194,7 +245,12 @@ def audio_to_wav_bytes(audio: np.ndarray, sample_rate: int = 16000) -> bytes:
     return buffer.getvalue()
 
 
-def load_wav(audio_bytes: bytes) -> np.ndarray:
+def load_wav(audio_bytes: bytes) -> tuple[np.ndarray, int]:
+    """Load WAV audio from bytes.
+
+    Returns:
+        Tuple of (audio_data as float32 ndarray, sample_rate).
+    """
     buffer = io.BytesIO(audio_bytes)
     with wave.open(buffer, "rb") as wf:
         sample_rate = wf.getframerate()

@@ -149,27 +149,43 @@ _MIGRATIONS: list[type[Migration]] = [
 ]
 
 
-def _load_life_migration():
-    """Lazy load the life management migration."""
+def _load_migration(name: str):
+    """Lazy load a migration by filename."""
     try:
         import sys
         from pathlib import Path
 
-        migration_path = Path(__file__).parent / "002_life_management.py"
+        migration_path = Path(__file__).parent / name
         if migration_path.exists():
             import importlib.util
 
-            spec = importlib.util.spec_from_file_location(
-                "life_management_migration", migration_path
-            )
+            spec = importlib.util.spec_from_file_location(name, migration_path)
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
-                sys.modules["life_management_migration"] = module
+                sys.modules[name] = module
                 spec.loader.exec_module(module)
-                return module.LifeManagementMigration
+                return module
     except Exception:
         pass
     return None
+
+
+def _load_life_migration():
+    """Lazy load the life management migration."""
+    module = _load_migration("002_life_management.py")
+    return module.LifeManagementMigration if module else None
+
+
+def _load_goal_tasks_migration():
+    """Lazy load the goal tasks migration."""
+    module = _load_migration("003_goal_tasks.py")
+    return module.GoalTasksMigration if module else None
+
+
+def _load_daily_tasks_migration():
+    """Lazy load the daily tasks migration."""
+    module = _load_migration("004_daily_tasks.py")
+    return module.DailyTasksMigration if module else None
 
 
 def get_all_migrations() -> list[Migration]:
@@ -179,6 +195,14 @@ def get_all_migrations() -> list[Migration]:
     life_migration = _load_life_migration()
     if life_migration:
         migrations.append(life_migration())
+
+    goal_tasks_migration = _load_goal_tasks_migration()
+    if goal_tasks_migration:
+        migrations.append(goal_tasks_migration())
+
+    daily_tasks_migration = _load_daily_tasks_migration()
+    if daily_tasks_migration:
+        migrations.append(daily_tasks_migration())
 
     return migrations
 

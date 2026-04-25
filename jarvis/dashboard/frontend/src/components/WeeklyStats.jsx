@@ -28,7 +28,7 @@ export default function WeeklyStats({ stats }) {
   return (
     <div className="card h-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-heading text-lg text-cyan tracking-wider">
+        <h2 className="font-heading text-lg text-primary tracking-wider">
           WEEKLY STATS
         </h2>
         <div className="text-right">
@@ -67,7 +67,7 @@ export default function WeeklyStats({ stats }) {
           <span className="text-text-dim">70%+</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-cyan" />
+          <div className="w-3 h-3 rounded bg-primary" />
           <span className="text-text-dim">40-70%</span>
         </div>
         <div className="flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function WeeklyStats({ stats }) {
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-cyan/20">
+      <div className="mt-4 pt-4 border-t border-primary/20">
         <div className="flex justify-between text-sm">
           <span className="text-text-dim">This week:</span>
           <span className="font-mono text-success">

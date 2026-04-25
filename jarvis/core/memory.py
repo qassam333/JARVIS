@@ -1,9 +1,10 @@
 """Memory engine for context management."""
 
+import re
 from dataclasses import dataclass, field
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from difflib import SequenceMatcher
 from typing import Any, Optional
-from datetime import timedelta
 
 from jarvis.utils.logger import get_logger
 
@@ -11,10 +12,23 @@ logger = get_logger("core.memory")
 
 
 @dataclass
+class ConversationTurn:
+    """A single exchange in a conversation."""
+
+    role: str  # 'user' or 'assistant'
+    text: str
+    timestamp: datetime = field(default_factory=datetime.now)
+    intent: Optional[str] = None
+    entities: dict = field(default_factory=dict)
+    response_data: Any = None  # e.g. list of tasks returned
+
+
+@dataclass
 class SessionMemory:
     """Short-term memory for current session."""
 
     recent_commands: list[dict] = field(default_factory=list)
+    conversation_history: list[ConversationTurn] = field(default_factory=list)
     current_topic: Optional[str] = None
     pending_confirmation: Optional[dict] = None
     last_result: Any = None
@@ -32,9 +46,39 @@ class SessionMemory:
         if len(self.recent_commands) > 10:
             self.recent_commands.pop(0)
 
+    def add_turn(self, role: str, text: str, intent: str = None,
+                 entities: dict = None, response_data: Any = None):
+        """Add a conversation turn."""
+        turn = ConversationTurn(
+            role=role,
+            text=text,
+            intent=intent,
+            entities=entities or {},
+            response_data=response_data,
+        )
+        self.conversation_history.append(turn)
+        # Keep last 20 turns
+        if len(self.conversation_history) > 20:
+            self.conversation_history.pop(0)
+
+    def get_last_assistant_turn(self) -> Optional[ConversationTurn]:
+        """Get the most recent assistant turn."""
+        for turn in reversed(self.conversation_history):
+            if turn.role == "assistant":
+                return turn
+        return None
+
+    def get_last_user_turn(self) -> Optional[ConversationTurn]:
+        """Get the most recent user turn."""
+        for turn in reversed(self.conversation_history):
+            if turn.role == "user":
+                return turn
+        return None
+
     def clear(self):
         """Clear session memory."""
         self.recent_commands.clear()
+        self.conversation_history.clear()
         self.current_topic = None
         self.pending_confirmation = None
         self.last_result = None
@@ -60,6 +104,7 @@ class DailyContext:
     date: date
     energy_level: Optional[int] = None
     mood: Optional[str] = None
+    productivity_score: Optional[int] = None
     tasks_completed: int = 0
     notes: Optional[str] = None
 
@@ -180,6 +225,66 @@ class MemoryEngine:
             return "Wrapping up for the day?"
 
         return None
+
+    def resolve_reference(self, text: str) -> str:
+        """Resolve pronoun/ordinal references from conversation context.
+
+        Examples:
+            'mark the first one done' -> 'mark <task_title> done'
+            'tell me more about it' -> 'tell me more about <last_entity>'
+        """
+        text_lower = text.lower().strip()
+
+        # Ordinal references: "the first one", "the second one", "number 2"
+        ordinal_map = {
+            "first": 0, "1st": 0, "number 1": 0, "the first one": 0,
+            "second": 1, "2nd": 1, "number 2": 1, "the second one": 1,
+            "third": 2, "3rd": 2, "number 3": 2, "the third one": 2,
+            "fourth": 3, "4th": 3, "number 4": 3,
+            "fifth": 4, "5th": 4, "number 5": 4,
+            "last": -1, "the last one": -1,
+        }
+
+        last_turn = self.session.get_last_assistant_turn()
+        if not last_turn or not last_turn.response_data:
+            return text
+
+        response_items = last_turn.response_data
+        if not isinstance(response_items, list) or not response_items:
+            return text
+
+        # Check for ordinal references
+        for pattern, index in ordinal_map.items():
+            if pattern in text_lower:
+                try:
+                    item = response_items[index]
+                    item_id = item.get("id", "") if isinstance(item, dict) else getattr(item, "id", "")
+                    item_title = item.get("title", "") if isinstance(item, dict) else getattr(item, "title", "")
+
+                    if item_id:
+                        # Replace the ordinal reference with the actual identifier
+                        result = re.sub(
+                            r'(?:the\s+)?(?:first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|last)(?:\s+one)?|number\s+\d',
+                            item_title or item_id,
+                            text_lower, count=1
+                        )
+                        logger.debug(f"Resolved reference: '{text}' -> '{result}'")
+                        return result
+                except (IndexError, AttributeError):
+                    pass
+
+        # Pronoun references: "it", "that", "this"
+        if re.search(r'\b(it|that|this)\b', text_lower):
+            # Use the first item from the last result
+            if response_items:
+                item = response_items[0]
+                item_title = item.get("title", "") if isinstance(item, dict) else getattr(item, "title", "")
+                if item_title:
+                    result = re.sub(r'\b(it|that|this)\b', item_title, text_lower, count=1)
+                    logger.debug(f"Resolved pronoun: '{text}' -> '{result}'")
+                    return result
+
+        return text
 
     def to_context(self) -> "Context":
         """Convert to brain Context."""

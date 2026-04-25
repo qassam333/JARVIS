@@ -263,6 +263,14 @@ class Config:
         """Create necessary directories."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+    def reload(self) -> None:
+        """Reload configuration from disk.
+
+        Clears the lru_cache so _load_config() runs fresh.
+        """
+        _load_config.cache_clear()
+        self._config = _load_config()
+
     def to_dict(self) -> dict[str, Any]:
         """Export configuration as dictionary."""
         return self._config.model_dump()

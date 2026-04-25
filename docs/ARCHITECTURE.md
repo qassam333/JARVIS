@@ -23,7 +23,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                       INPUT                                  │
-│   Text (CLI) │ Voice (STT) │ API │ Wake Word                │
+│   CLI │ Voice (STT) │ Web Dashboard │ API │ Wake Word       │
 └─────────────────────────────┬───────────────────────────────┘
                               │
                               ▼
@@ -90,26 +90,24 @@ Output: Intent(
 
 #### Implementation Strategy
 
-**V1 (Rule-Based)**: Pattern matching with regex
+**V1 (Rule-Based + Fuzzy Matching)**: Primary pattern matching with regex, fallback to fuzzy keyword scoring.
 ```python
+# Primary Regex Matching
 PATTERNS = {
     "add_task": [
         r"remind me to (?P<title>.*)",
         r"add task (?P<title>.*)",
-        r"schedule (?P<title>.*)",
-    ],
-    "query_tasks": [
-        r"what do I have (today|tomorrow|)?",
-        r"list tasks",
-        r"show me my tasks",
     ]
+}
+
+# Fallback Fuzzy Matching
+INTENT_KEYWORDS = {
+    "add_task": ["add", "create", "new", "task", "todo", "remind"]
 }
 ```
 
-**V2 (LLM)**: Ollama with local model for fuzzy matching
-
-#### Why Not Just Use LLM from Start?
-1. **Speed**: Pattern matching is instant
+#### Why Not Use an LLM?
+1. **Speed**: Pattern matching and fuzzy scoring is instant
 2. **Privacy**: No model inference needed
 3. **Determinism**: Same input = same output always
 4. **Simplicity**: Easier to debug and maintain

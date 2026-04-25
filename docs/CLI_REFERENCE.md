@@ -26,7 +26,8 @@ python -m jarvis.cli --help
 jarvis accountability  - Accountability and motivation
 jarvis ask             - Natural language queries
 jarvis briefing        - Daily briefing
-jarvis goal            - Goal management
+jarvis daily           - Daily task selection (NEW)
+jarvis goal            - Goal management with tasks
 jarvis habit           - Habit tracking
 jarvis know            - Knowledge base
 jarvis note            - Notes
@@ -108,6 +109,81 @@ jarvis goal add "Goal Title" --area career --deadline 2026-06-01 --priority high
 jarvis goal progress <goal_id> 50
 ```
 Update goal progress (0-100%).
+
+### Generate Tasks from Goal
+```bash
+jarvis goal tasks generate <goal_id>
+```
+Generate actionable tasks from a goal. Creates phase-based tasks with deadlines.
+
+```bash
+# Generate tasks for ALL goals
+jarvis goal tasks generate --all
+```
+
+### List Goal Tasks
+```bash
+jarvis goal tasks list <goal_id>
+```
+Show all tasks linked to a specific goal.
+
+---
+
+## Daily Task Commands
+
+Daily task selection and management with priority scoring.
+
+### Generate Daily Tasks
+```bash
+jarvis daily generate
+```
+Generate today's task list (top 5 prioritized tasks).
+
+```bash
+# Custom limit
+jarvis daily generate --limit 3
+
+# Specific date
+jarvis daily generate --date 2026-04-20
+```
+
+### List Daily Tasks
+```bash
+jarvis daily list
+```
+Show today's selected tasks with status and scores.
+
+```bash
+# Specific date
+jarvis daily list --date 2026-04-15
+
+# Filter by status
+jarvis daily list --status pending
+```
+
+### Mark Task Done
+```bash
+jarvis daily complete <task_id>
+```
+Mark a task as done. Updates both daily_tasks and tasks tables.
+
+### Roll Over Tasks
+```bash
+jarvis daily reroll
+```
+Roll over undone tasks to tomorrow.
+
+```bash
+# Custom date range
+jarvis daily reroll --from-date 2026-04-15 --to-date 2026-04-16
+```
+
+### View History
+```bash
+jarvis daily history
+jarvis daily history --days 30
+```
+View completion history over time.
 
 ---
 

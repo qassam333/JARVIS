@@ -19,6 +19,16 @@ class AccountabilityEngine:
         self.habits = habit_service
         self.reviews = review_service
 
+    def _get_dream_project(self) -> str:
+        """Get the user's top active goal name for motivational messaging."""
+        try:
+            active = self.goals.get_goals(parent_only=True, status="active")
+            if active:
+                return active[0].title
+        except Exception:
+            pass
+        return "your goals"
+
     def get_today_preview(self) -> str:
         profile = self.profile.get_profile()
         today = date.today()
@@ -70,7 +80,8 @@ class AccountabilityEngine:
                 lines.append(f"  - {h.name}")
 
         lines.append("")
-        lines.append("Stay focused. O4 Studio needs the work you do today.")
+        dream = self._get_dream_project()
+        lines.append(f"Stay focused. {dream} needs the work you do today.")
 
         return "\n".join(lines)
 
@@ -105,7 +116,8 @@ class AccountabilityEngine:
                 lines.append(f"  - {h.name}")
 
         lines.append("")
-        lines.append("Rest well. Tomorrow is another day to build O4 Studio.")
+        dream = self._get_dream_project()
+        lines.append(f"Rest well. Tomorrow is another day to build {dream}.")
 
         return "\n".join(lines)
 
@@ -123,7 +135,7 @@ class AccountabilityEngine:
             lines.append(f"You're building momentum. Keep this pace and")
             lines.append(f"the goal is getting closer every day.")
             lines.append("")
-            lines.append("Keep going. O4 Studio is becoming real.")
+            lines.append(f"Keep going. {self._get_dream_project()} is becoming real.")
         elif habit.current_streak >= 3:
             lines.append(f"3+ day streak on {habit.name}!")
             lines.append("You're building a habit. Consistency is key.")
@@ -203,7 +215,7 @@ class AccountabilityEngine:
             lines.append(f"AVG PRODUCTIVITY: {summary['avg_productivity']}/10")
 
         lines.append("")
-        lines.append("Keep pushing. Every day is a step toward O4 Studio.")
+        lines.append(f"Keep pushing. Every day is a step toward {self._get_dream_project()}.")
 
         return "\n".join(lines)
 
@@ -280,15 +292,17 @@ class AccountabilityEngine:
         return "\n".join(lines)
 
     def get_motivation_message(self) -> str:
+        dream = self._get_dream_project()
+
         messages = [
-            "Every line of code brings O4 Studio closer to reality.",
-            "The grind today builds the studio tomorrow.",
-            "No one else is going to build your games for you.",
+            f"Every line of code brings {dream} closer to reality.",
+            "The grind today builds the future tomorrow.",
+            "No one else is going to build your dreams for you.",
             "Your future self will thank you for the work you do now.",
-            "LINKIT won't finish itself. Get to it.",
-            "O4 Studio starts with today's work.",
+            f"{dream} won't finish itself. Get to it.",
             "Discipline beats motivation. Keep showing up.",
             "The only way out is through. Keep pushing.",
+            f"Stay focused. Stay disciplined. Ship {dream}.",
         ]
 
         import random

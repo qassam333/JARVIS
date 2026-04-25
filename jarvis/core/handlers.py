@@ -58,14 +58,18 @@ def handle_list_tasks(intent: Intent, context: Context) -> Response:
 
     task_list = "\n".join(
         [
-            f"  • {t.title} (Energy: {t.energy_level}, Priority: {t.priority})"
-            for t in tasks
+            f"  {i+1}. {t.title} (Energy: {t.energy_level}, Priority: {t.priority})"
+            for i, t in enumerate(tasks)
         ]
     )
+
+    # Store task data for follow-up reference resolution
+    task_data = [{"id": t.id, "title": t.title} for t in tasks]
 
     return Response(
         success=True,
         message=f"You have {len(tasks)} pending tasks:\n{task_list}",
+        data=task_data,
     )
 
 

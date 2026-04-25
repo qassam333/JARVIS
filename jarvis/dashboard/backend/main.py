@@ -15,10 +15,13 @@ import uvicorn
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from jarvis.db.database import Database
+from jarvis.db.models import TaskStatus
 from jarvis.skills.profile import ProfileService
 from jarvis.skills.goals import GoalService
 from jarvis.skills.habits import HabitService
 from jarvis.skills.reviews import ReviewService
+from jarvis.skills.tasks import TaskService
+from jarvis.skills.briefing import BriefingService
 
 app = FastAPI(
     title="JARVIS Dashboard",
@@ -42,6 +45,8 @@ profile_service = ProfileService(db)
 goal_service = GoalService(db)
 habit_service = HabitService(db)
 review_service = ReviewService(db)
+task_service = TaskService(db)
+briefing_service = BriefingService(db)
 
 
 @app.get("/api/profile")
@@ -281,13 +286,111 @@ async def get_dashboard():
     }
 
 
+# ---- Task endpoints ----
+
+@app.get("/api/tasks")
+async def get_tasks(status: str = "pending", limit: int = 20):
+    """Get tasks with optional status filter."""
+    status_enum = TaskStatus(status) if status else None
+    tasks = task_service.list(status=status_enum, limit=limit)
+
+    return {
+        "tasks": [
+            {
+                "id": t.id,
+                "title": t.title,
+                "description": t.description,
+                "energy_level": t.energy_level,
+                "priority": t.priority,
+                "status": t.status,
+                "deadline": t.deadline.isoformat() if t.deadline else None,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+                "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+            }
+            for t in tasks
+        ]
+    }
+
+
+@app.post("/api/tasks/{task_id}/complete")
+async def complete_task(task_id: str):
+    """Mark a task as completed."""
+    task = task_service.complete(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"success": True, "task_id": task_id, "title": task.title}
+
+
+@app.post("/api/tasks")
+async def create_task(title: str, priority: int = 3, energy: int = 5):
+    """Create a new task."""
+    from jarvis.db.models import TaskCreate
+    task = task_service.create(TaskCreate(title=title, priority=priority, energy_level=energy))
+    return {"success": True, "task_id": task.id, "title": task.title}
+
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str):
+    """Delete a task."""
+    if task_service.delete(task_id):
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Task not found")
+
+
+# ---- Briefing endpoint ----
+
+@app.get("/api/briefing")
+async def get_briefing():
+    """Get daily briefing."""
+    profile_data = await get_profile()
+    user_name = profile_data.get("name")
+    briefing_text = briefing_service.generate(user_name=user_name)
+    
+    pending_count = task_service.count(TaskStatus.PENDING)
+    due_today = len(task_service.get_due_today())
+    
+    return {
+        "briefing": briefing_text,
+        "quick": briefing_service.quick_briefing(),
+        "pending_tasks": pending_count,
+        "due_today": due_today,
+    }
+
+
+# ---- System status ----
+
+@app.get("/api/system")
+async def get_system_status():
+    """Get system health and stats."""
+    pending = task_service.count(TaskStatus.PENDING)
+    completed = task_service.count(TaskStatus.COMPLETED)
+    habits = habit_service.get_habits()
+    goals = goal_service.get_goals(parent_only=True)
+    
+    return {
+        "status": "online",
+        "version": "0.2.0",
+        "stats": {
+            "pending_tasks": pending,
+            "completed_tasks": completed,
+            "active_habits": len(habits),
+            "active_goals": len([g for g in goals if g.status == "active"]),
+        }
+    }
+
+
 @app.get("/")
 async def root():
-    """Serve dashboard HTML."""
+    """Serve the JARVIS Dashboard."""
+    # Serve Vite-built React frontend
     html_path = Path(__file__).parent.parent / "frontend" / "dist" / "index.html"
-
     if html_path.exists():
         return HTMLResponse(content=html_path.read_text())
+        
+    # Fallback to premium static dashboard
+    premium_path = Path(__file__).parent / "static" / "index.html"
+    if premium_path.exists():
+        return HTMLResponse(content=premium_path.read_text())
 
     return HTMLResponse(
         content="""
@@ -295,12 +398,22 @@ async def root():
             <head><title>JARVIS Dashboard</title></head>
             <body>
                 <h1>JARVIS Dashboard</h1>
-                <p>Frontend not built. Run:</p>
-                <code>cd frontend && npm install && npm run build</code>
+                <p>Frontend not built.</p>
             </body>
         </html>
         """
     )
+
+
+# Serve static files for the premium dashboard
+_static_dir = Path(__file__).parent / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+# Serve assets for the React frontend
+_react_assets_dir = Path(__file__).parent.parent / "frontend" / "dist" / "assets"
+if _react_assets_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(_react_assets_dir)), name="assets")
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080):
