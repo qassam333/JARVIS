@@ -29,9 +29,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
+from jarvis.utils.config import config
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+if hasattr(config, "_config") and hasattr(config._config, "api") and hasattr(config._config.api, "cors_origins"):
+    for o in config._config.api.cors_origins:
+        if o not in origins:
+            origins.append(o)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
