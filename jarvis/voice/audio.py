@@ -5,9 +5,21 @@ import os
 import wave
 import subprocess
 import sys
+from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
 import numpy as np
 from typing import Optional, Generator
 from dataclasses import dataclass
+
+# Suppress ALSA log flooding at C level
+try:
+    ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+    def py_error_handler(filename, line, function, err, fmt):
+        pass
+    c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+    asound = cdll.LoadLibrary('libasound.so.2')
+    asound.snd_lib_error_set_handler(c_error_handler)
+except Exception:
+    pass
 
 def _safe_pyaudio_init():
     """Try to import pyaudio safely, working around PortAudio SIGFPE on some systems.

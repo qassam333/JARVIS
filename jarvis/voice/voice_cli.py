@@ -3,6 +3,7 @@
 import sys
 import time
 import threading
+from datetime import datetime
 from typing import Optional
 
 from jarvis.voice.audio import AudioCapture, AudioConfig
@@ -136,6 +137,9 @@ class VoiceInterface:
         self.speak("Voice interface activated. Waiting for wake word.")
         self.wake_word.on_wake_word(self._on_wake_word)
 
+        # Start background reminder and accountability checker
+        threading.Thread(target=self._reminder_loop, daemon=True).start()
+
         try:
             while self.running:
                 # 1. Start Wake Word mode reliably safely
@@ -185,6 +189,60 @@ class VoiceInterface:
     def _on_wake_word(self):
         logger.info("Wake word detected - activating conversation")
         self.wake_event.set()
+
+    def _reminder_loop(self):
+        """Background thread checking for scheduled reminders and announcements."""
+        logger.info("Starting background reminder thread")
+        last_check_minute = -1
+        
+        while self.running:
+            try:
+                now = datetime.now()
+                # Run once per minute
+                if now.minute != last_check_minute:
+                    last_check_minute = now.minute
+                    self._check_and_trigger_reminders(now)
+            except Exception as e:
+                logger.error(f"Error in reminder loop: {e}")
+            time.sleep(10)
+
+    def _check_and_trigger_reminders(self, now: datetime):
+        """Check database for active habits with a reminder due now."""
+        from jarvis.core.services import get_services
+        
+        try:
+            services = get_services(self.brain.db if self.brain else None)
+            habits = services.habits.get_habits(active_only=True)
+            today_logs = {log.habit_id for log in services.habits.get_today_logs()}
+            
+            current_time_str = now.strftime("%H:%M") # e.g. "18:00"
+            
+            for habit in habits:
+                if habit.reminder_time == current_time_str:
+                    # If not completed today, play a voice reminder!
+                    if habit.id not in today_logs:
+                        message = f"Excuse me, GG. This is your scheduled reminder to do your habit: {habit.name}. Let's get to work!"
+                        
+                        # Use accountability style if possible
+                        if services.accountability:
+                            dream = services.accountability._get_dream_project()
+                            message = f"GG, it is {current_time_str}. Time for your habit: {habit.name}. Remember, {dream} is built by showing up every single day. Let's do it!"
+                        
+                        logger.info(f"Triggering voice reminder for habit: {habit.name}")
+                        # To avoid disrupting an active conversation, only speak if not in conversation
+                        if not self.conversation_active:
+                            # Speak in a separate thread so it doesn't block the loop
+                            threading.Thread(target=self.speak, args=(message,), daemon=True).start()
+                            
+                            # Log it in the accountability log
+                            if services.accountability:
+                                services.accountability.log_accountability(
+                                    trigger=f"Habit reminder: {habit.name}",
+                                    message=message,
+                                    action="Voice prompt spoken"
+                                )
+        except Exception as e:
+            logger.error(f"Failed to check reminders: {e}")
 
     def stop(self):
         logger.info("Stopping voice interface...")
