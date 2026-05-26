@@ -1,7 +1,7 @@
 """CLI interface for JARVIS."""
 
 import click
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -832,7 +832,7 @@ def daily_generate(limit, date):
 
     service = get_services().daily_tasks
 
-    target = datetime.date.fromisoformat(date) if date else datetime.date.today()
+    target = today_date.fromisoformat(date) if date else today_date.today()
     task_ids = service.generate_daily(target, limit)
 
     if not task_ids:
@@ -850,12 +850,12 @@ def daily_reroll(from_date, to_date):
     service = get_services().daily_tasks
 
     from_d = (
-        datetime.date.fromisoformat(from_date) if from_date else datetime.date.today()
+        date.fromisoformat(from_date) if from_date else date.today()
     )
     to_d = (
-        datetime.date.fromisoformat(to_date)
+        date.fromisoformat(to_date)
         if to_date
-        else from_d + datetime.timedelta(days=1)
+        else from_d + timedelta(days=1)
     )
 
     rolled_cnt = service.roll_over_undone(from_d, to_d)
@@ -898,7 +898,7 @@ def daily_complete(task_id, date):
     # datetime already imported at top
 
     service = get_services().daily_tasks
-    target = datetime.date.fromisoformat(date) if date else datetime.date.today()
+    target = today_date.fromisoformat(date) if date else today_date.today()
 
     service.mark_done(task_id, target)
     console.print(f"[green]Marked {task_id} as done[/green]")
@@ -912,7 +912,7 @@ def daily_list(date, status):
 
     service = get_services().daily_tasks
 
-    target = datetime.date.fromisoformat(date) if date else datetime.date.today()
+    target = today_date.fromisoformat(date) if date else today_date.today()
     daily_tasks = service.get_daily_tasks(target, status)
 
     if not daily_tasks:
