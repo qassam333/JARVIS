@@ -169,11 +169,20 @@ class BriefingService:
             lines = ["Recommended Schedule:"]
             task_count = sum(1 for s in schedule.slots if s.type == "task")
             lines.append(
-                f"  {task_count} tasks scheduled, {schedule.total_focus_minutes()} minutes focus time"
+                f"  {task_count} tasks scheduled, {schedule.total_focus_minutes()} minutes focus time:"
             )
+            
+            for slot in schedule.slots:
+                time_str = f"{slot.start.strftime('%H:%M')} - {slot.end.strftime('%H:%M')}"
+                if slot.type == "break":
+                    lines.append(f"      • {time_str} [Break]")
+                else:
+                    energy_tag = "[High]" if slot.energy_level and slot.energy_level >= 7 else "[Low]"
+                    lines.append(f"      • {time_str} {energy_tag} {slot.task_title}")
 
             if schedule.warnings:
-                for warning in schedule.warnings[:1]:
+                lines.append("")
+                for warning in schedule.warnings[:2]:
                     lines.append(f"  ! {warning}")
 
             return "\n".join(lines)
