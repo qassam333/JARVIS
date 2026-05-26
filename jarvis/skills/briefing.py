@@ -15,9 +15,6 @@ class BriefingService:
 
     def generate(self, user_name: str = None) -> str:
         """Generate daily briefing."""
-        from jarvis.skills.tasks import TaskService
-        from jarvis.skills.schedule import ScheduleEngine, Task as ScheduleTask
-
         greeting = self._get_greeting()
         if user_name:
             greeting = f"Good morning, {user_name}!" if self._is_morning() else greeting
