@@ -21,56 +21,76 @@ try:
 except Exception:
     pass
 
+class SilenceStderr:
+    """Context manager to redirect stderr to devnull at the OS level (silencing C libraries like ALSA)."""
+    def __enter__(self):
+        try:
+            self.stderr_fd = sys.stderr.fileno()
+            self.saved_stderr_fd = os.dup(self.stderr_fd)
+            self.devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(self.devnull, self.stderr_fd)
+        except Exception:
+            self.saved_stderr_fd = None
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.saved_stderr_fd is not None:
+            try:
+                os.dup2(self.saved_stderr_fd, self.stderr_fd)
+                os.close(self.saved_stderr_fd)
+                os.close(self.devnull)
+            except Exception:
+                pass
+
 def _safe_pyaudio_init():
     """Try to import pyaudio safely, working around PortAudio SIGFPE on some systems.
     
     Some audio devices (e.g. NVidia HDMI) cause PortAudio to crash with SIGFPE
     during device enumeration. We detect this and restrict ALSA to safe cards.
     """
-    # First try: just import and init normally
-    try:
-        import pyaudio
-        # Quick test: can we init without crashing?
-        # Use a subprocess so a crash doesn't kill us
-        result = subprocess.run(
-            [sys.executable, "-c", "import pyaudio; p = pyaudio.PyAudio(); p.terminate()"],
-            capture_output=True, timeout=10
-        )
-        if result.returncode == 0:
-            return pyaudio, True
-        
-        # Crashed — try restricting to specific ALSA cards
-        # Find a card that works by testing each one
+    with SilenceStderr():
         try:
-            cards_path = "/proc/asound/cards"
-            if os.path.exists(cards_path):
-                with open(cards_path) as f:
-                    content = f.read()
-                # Extract card numbers
-                import re
-                card_nums = re.findall(r'^\s*(\d+)\s+\[', content, re.MULTILINE)
-                
-                for card_num in card_nums:
-                    env = os.environ.copy()
-                    env["ALSA_CARD"] = card_num
-                    result = subprocess.run(
-                        [sys.executable, "-c", "import pyaudio; p = pyaudio.PyAudio(); p.terminate()"],
-                        capture_output=True, timeout=10, env=env
-                    )
-                    if result.returncode == 0:
-                        os.environ["ALSA_CARD"] = card_num
-                        return pyaudio, True
+            import pyaudio
+            # Quick test: can we init without crashing?
+            # Use a subprocess so a crash doesn't kill us
+            result = subprocess.run(
+                [sys.executable, "-c", "import pyaudio; p = pyaudio.PyAudio(); p.terminate()"],
+                capture_output=True, timeout=10
+            )
+            if result.returncode == 0:
+                return pyaudio, True
+            
+            # Crashed — try restricting to specific ALSA cards
+            # Find a card that works by testing each one
+            try:
+                cards_path = "/proc/asound/cards"
+                if os.path.exists(cards_path):
+                    with open(cards_path) as f:
+                        content = f.read()
+                    # Extract card numbers
+                    import re
+                    card_nums = re.findall(r'^\s*(\d+)\s+\[', content, re.MULTILINE)
+                    
+                    for card_num in card_nums:
+                        env = os.environ.copy()
+                        env["ALSA_CARD"] = card_num
+                        result = subprocess.run(
+                            [sys.executable, "-c", "import pyaudio; p = pyaudio.PyAudio(); p.terminate()"],
+                            capture_output=True, timeout=10, env=env
+                        )
+                        if result.returncode == 0:
+                            os.environ["ALSA_CARD"] = card_num
+                            return pyaudio, True
+            except Exception:
+                pass
+            
+            # Last resort: disable device enumeration issues by setting a default
+            os.environ.setdefault("ALSA_CARD", "0")
+            return pyaudio, True
+            
+        except ImportError:
+            return None, False
         except Exception:
-            pass
-        
-        # Last resort: disable device enumeration issues by setting a default
-        os.environ.setdefault("ALSA_CARD", "0")
-        return pyaudio, True
-        
-    except ImportError:
-        return None, False
-    except Exception:
-        return None, False
+            return None, False
 
 _pyaudio_module, PYAUDIO_AVAILABLE = _safe_pyaudio_init()
 if _pyaudio_module:
@@ -98,7 +118,8 @@ class AudioCapture:
         self.stream = None
 
         if PYAUDIO_AVAILABLE:
-            self.audio = pyaudio.PyAudio()
+            with SilenceStderr():
+                self.audio = pyaudio.PyAudio()
         else:
             logger.warning("PyAudio not available. Install with: pip install pyaudio")
 
