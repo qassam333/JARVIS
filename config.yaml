@@ -1,7 +1,7 @@
 jarvis:
   name: "JARVIS"
   version: "0.2.0"
-  data_dir: "/home/deep/BACKUP/GG POJECT/GGjarvis/JARVIS/data"
+  data_dir: "./data"
   database: "jarvis.db"
 
 user:

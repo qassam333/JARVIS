@@ -13,7 +13,7 @@ def main():
     setup_logger(level=config.log_level, debug=config.debug)
 
     logger = get_logger("main")
-    logger.info(f"JARVIS v0.1.0 starting...")
+    logger.info(f"JARVIS v0.2.0 starting...")
     logger.info(f"Data directory: {config.data_dir}")
     logger.info(f"Database: {config.db_path}")
 

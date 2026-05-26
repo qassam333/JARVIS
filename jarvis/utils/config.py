@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class JarvisCore(BaseModel):
     name: str = "JARVIS"
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     data_dir: Path = Path(__file__).resolve().parent.parent.parent / "data"
     database: str = "jarvis.db"
     debug: bool = False
